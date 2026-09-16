@@ -13,6 +13,8 @@ export function SiteHeader() {
     <nav className={open ? 'nav-links open' : 'nav-links'}>
       <Link href="/" onClick={() => setOpen(false)}>{t.nav.home}</Link>
       <Link href="/portfolio" onClick={() => setOpen(false)}>{t.nav.portfolio}</Link>
+      <Link href="/flash" onClick={() => setOpen(false)}>{t.nav.flash}</Link>
+      <Link href="/healed" onClick={() => setOpen(false)}>{t.nav.healed}</Link>
       <Link href="/faq" onClick={() => setOpen(false)}>{t.nav.faq}</Link>
       <a href={instagram} target="_blank" rel="noreferrer">{t.nav.dm}</a>
     </nav>
