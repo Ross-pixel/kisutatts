@@ -1,5 +1,4 @@
 'use client'
-import Link from 'next/link'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useLanguage } from '@/components/language-provider'
@@ -9,13 +8,13 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false)
   const { language, setLanguage, t } = useLanguage()
   return <header className="topbar">
-    <Link href="/" className="brand">kisu<i>.tatts</i></Link>
+    <a href="/" className="brand">kisu<i>.tatts</i></a>
     <nav className={open ? 'nav-links open' : 'nav-links'}>
-      <Link href="/" onClick={() => setOpen(false)}>{t.nav.home}</Link>
-      <Link href="/portfolio" onClick={() => setOpen(false)}>{t.nav.portfolio}</Link>
-      <Link href="/flash" onClick={() => setOpen(false)}>{t.nav.flash}</Link>
-      <Link href="/on-skin" onClick={() => setOpen(false)}>{t.nav.onSkin}</Link>
-      <Link href="/faq" onClick={() => setOpen(false)}>{t.nav.faq}</Link>
+      <a href="/" onClick={() => setOpen(false)}>{t.nav.home}</a>
+      <a href="/portfolio" onClick={() => setOpen(false)}>{t.nav.portfolio}</a>
+      <a href="/flash" onClick={() => setOpen(false)}>{t.nav.flash}</a>
+      <a href="/on-skin" onClick={() => setOpen(false)}>{t.nav.onSkin}</a>
+      <a href="/faq" onClick={() => setOpen(false)}>{t.nav.faq}</a>
       <a href={instagram} target="_blank" rel="noreferrer">{t.nav.dm}</a>
     </nav>
     <div className="header-actions">
