@@ -1,0 +1,3 @@
+import { SiteHeader } from '@/components/site-header'
+import { faqs } from '../data'
+export default function FAQPage(){return <main className="site-shell"><SiteHeader/><section className="section faq-page"><div className="section-label">♡ FAQ / aftercare</div><h1 className="page-title">Good to<br/><span>know.</span></h1><div className="faq-list">{faqs.en.map(([q,a])=><article className="faq-item" key={q}><h2>{q}</h2><p>{a}</p></article>)}</div><div className="aftercare"><h2>Aftercare ♡</h2><p>Wash your tattoo gently with lukewarm water and mild soap. Pat dry, then apply a thin layer of fragrance-free moisturiser. Avoid swimming, soaking and direct sun until fully healed.</p></div></section></main>}
