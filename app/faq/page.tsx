@@ -1,3 +1,18 @@
+'use client'
+
 import { SiteHeader } from '@/components/site-header'
-import { faqs } from '../data'
-export default function FAQPage(){return <main className="site-shell"><SiteHeader/><section className="section faq-page"><div className="section-label">♡ FAQ / aftercare</div><h1 className="page-title">Good to<br/><span>know.</span></h1><div className="faq-list">{faqs.en.map(([q,a])=><article className="faq-item" key={q}><h2>{q}</h2><p>{a}</p></article>)}</div><div className="aftercare"><h2>Aftercare ♡</h2><p>Wash your tattoo gently with lukewarm water and mild soap. Pat dry, then apply a thin layer of fragrance-free moisturiser. Avoid swimming, soaking and direct sun until fully healed.</p></div></section></main>}
+import { useLanguage } from '@/components/language-provider'
+
+export default function FAQPage() {
+  const { t } = useLanguage()
+  return <main className="site-shell"><SiteHeader /><section className="section faq-page">
+    <div className="section-label">♡ {t.faq.label} / aftercare</div>
+    <h1 className="page-title">{t.faq.title}</h1>
+    <div className="faq-list">{t.faq.questions.map(([question, answer]) => <article className="faq-item" key={question}><h2>{question}</h2><p>{answer}</p></article>)}</div>
+    <section className="aftercare" aria-labelledby="aftercare-title">
+      <h2 id="aftercare-title">{t.aftercare.title} ♡</h2>
+      <div className="aftercare-timeline">{t.aftercare.days.map((day) => <article className="aftercare-card" key={day.title}><div className="aftercare-card-head"><span className="aftercare-icon" aria-hidden="true">{day.icon}</span><h3>{day.title}</h3></div><p>{day.text}</p></article>)}</div>
+      <article className="aftercare-warning"><h3>{t.aftercare.warningTitle}</h3><p>{t.aftercare.warning}</p></article>
+    </section>
+  </section></main>
+}
