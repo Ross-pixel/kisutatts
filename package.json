@@ -5,7 +5,7 @@
   "packageManager": "pnpm@12.3.4",
   "scripts": {
     "dev": "tinacms dev -c \"next dev\"",
-    "build": "tinacms build && next build",
+    "build": "echo \"TINA_ID=$NEXT_PUBLIC_TINA_CLIENT_ID TOKEN_SET=$([ -n \"$TINA_TOKEN\" ] && echo yes || echo no)\" && tinacms build && next build",
     "start": "tinacms build && next start"
   },
   "dependencies": {

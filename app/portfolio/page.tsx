@@ -1,6 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+
+const TINA_BRANCH = 'main'
+const TINA_CLIENT_ID = process.env.NEXT_PUBLIC_TINA_CLIENT_ID ?? '(missing)'
+
 import { SiteHeader } from '@/components/site-header'
 import { portfolio } from '../data'
 import { useLanguage } from '@/components/language-provider'
@@ -12,6 +16,7 @@ export default function PortfolioPage() {
   const [filter, setFilter] = useState('All')
   const cms = useTinaContent<any>(PortfolioConnectionDocument, { first: 100 }, { portfolioConnection: { edges: [] } })
   const cmsItems = cms.portfolioConnection?.edges?.map((edge: any) => [edge.node.title, edge.node.category ?? 'Custom', edge.node.category?.toLowerCase().replace(/[^a-z]/g, '') ?? 'custom', edge.node.image] as const) ?? []
+
   const allItems = cmsItems.length ? cmsItems : portfolio
   const visible = filter === 'All' ? allItems : allItems.filter((item: any) => item[1] === filter || (filter === 'Healed' && item[1] === 'On Skin'))
   const filters = language === 'fi' ? ['Kaikki', 'Flora', 'B&W', 'Color', 'Iholla', 'ALT'] : ['All', 'Flora', 'B&W', 'Color', 'On Skin', 'ALT']
