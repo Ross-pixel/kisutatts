@@ -7,13 +7,13 @@ import { copy, flash, fiFlash, instagram, portfolio, prices } from './data'
 import { useTinaContent } from '@/components/tina-content'
 import { PortfolioConnectionDocument } from '@/tina/__generated__/types'
 
-const Card = ({ item }: { item: typeof portfolio[number] }) => <div className={`portfolio-card ${item[2]}`}><span className="art-shape" /><span className="art-label"><b>{item[0]}</b><small>{item[1]}</small></span></div>
+const Card = ({ item }: { item: any }) => <div className={`portfolio-card ${item[2]}`}>{item[3] ? <img src={item[3]} alt={item[0]} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /> : <span className="art-shape" />}<span className="art-label"><b>{item[0]}</b><small>{item[1]}</small></span></div>
 
 export default function Page() {
   const { language } = useLanguage()
   const c = copy[language]
   const cms = useTinaContent<any>(PortfolioConnectionDocument, { first: 3 }, { portfolioConnection: { edges: [] } })
-  const cmsItems = cms.portfolioConnection?.edges?.map((edge: any) => [edge.node.title, edge.node.category ?? 'Custom', edge.node.category?.toLowerCase().replace(/[^a-z]/g, '') ?? 'custom'] as const) ?? []
+  const cmsItems = cms.portfolioConnection?.edges?.map((edge: any) => [edge.node.title, edge.node.category ?? 'Custom', edge.node.category?.toLowerCase().replace(/[^a-z]/g, '') ?? 'custom', edge.node.image] as const) ?? []
   const featuredPortfolio = cmsItems.length ? cmsItems : portfolio
   const rows = language === 'fi' ? fiFlash : flash
   return <main className="site-shell"><SiteHeader />
