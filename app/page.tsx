@@ -19,7 +19,7 @@ export default function Page() {
     edge.node.title,
     edge.node.category ?? 'Custom',
     edge.node.category?.toLowerCase().replace(/[^a-z]/g, '') ?? 'custom',
-    edge.node.image,
+    edge.node.onSkin || edge.node.image || edge.node.sketch,
     edge.node.featured === true,
   ] as const) ?? []
   const featuredItems = cmsItems.filter((item: any) => item[4])
