@@ -13,7 +13,7 @@ export default function OnSkinPage() {
   const cms = useTinaContent<any>(OnSkinWorksConnectionDocument, { first: 100 }, { onSkinWorksConnection: { edges: [] } })
   const works = cms.onSkinWorksConnection?.edges?.map((edge: any) => edge.node).filter(Boolean) ?? []
   const displayWorks = works.length ? works : [1, 2, 3, 4, 5, 6].map((item) => ({ title: String(item), image: null }))
-  return <main className="site-shell"><SiteHeader /><div className="page-wrap">
+  return <main className="site-shell"><SiteHeader /><div className="page-wrap max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <a className="back-link" href="/"><ArrowLeft size={15} /> {t.pages.backHome}</a>
     <div className="section-label">♡ {t.onSkin.label}</div>
     <h1 className="page-title">{t.pages.onSkinTitle}</h1>

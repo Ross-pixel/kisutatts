@@ -58,7 +58,7 @@ export default function PortfolioPage() {
 
   return <main className="site-shell">
     <SiteHeader />
-    <section className="section portfolio-page">
+    <section className="section portfolio-page max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="section-label">✦ {language === 'fi' ? 'Portfolio / työt ja tarinat' : 'Portfolio / work & stories'}</div>
       <h1 className="page-title">
         {language === 'fi' ? <>Pieniä töitä,<br /><span>isoja tarinoita.</span></> : <>Little tattoos,<br /><span>their stories.</span></>}
