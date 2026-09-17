@@ -10,10 +10,27 @@ export default defineConfig({
   media: { tina: { mediaRoot: 'uploads', publicFolder: 'public' } },
   schema: { collections: [
     { name:'flashDesigns', label:'Flash-модели', path:'content/flash', format:'mdx', fields:[
-      {type:'string',name:'title',label:'Название',isTitle:true,required:true},{type:'string',name:'price',label:'Цена'},{type:'string',name:'category',label:'Категория'},{type:'image',name:'image',label:'Картинка'},{type:'rich-text',name:'description',label:'Описание'}] },
+      {type:'string',name:'title',label:'Название',isTitle:true,required:true},
+      {type:'string',name:'price',label:'Цена'},
+      {type:'string',name:'category',label:'Категория'},
+      {type:'image',name:'image',label:'Картинка'},
+      {type:'rich-text',name:'description',label:'Описание'}
+    ] },
     { name:'onSkinWorks', label:'Тату на коже', path:'content/on-skin', format:'mdx', fields:[
-      {type:'string',name:'title',label:'Название',isTitle:true,required:true},{type:'string',name:'category',label:'Категория'},{type:'image',name:'image',label:'Картинка'},{type:'rich-text',name:'description',label:'Описание'}] },
+      {type:'string',name:'title',label:'Название',isTitle:true,required:true},
+      {type:'string',name:'category',label:'Категория'},
+      {type:'image',name:'image',label:'Картинка'},
+      {type:'rich-text',name:'description',label:'Описание'}
+    ] },
     { name:'portfolio', label:'Портфолио', path:'content/portfolio', format:'mdx', fields:[
-      {type:'string',name:'title',label:'Название',isTitle:true,required:true},{type:'string',name:'category',label:'Категория',options:['Flora','B&W','Color','Healed','ALT','Custom']},{type:'string',name:'price',label:'Цена (например, 75€)'},{type:'image',name:'image',label:'Фото работы'},{type:'rich-text',name:'description',label:'Описание'}] },
+      {type:'string',name:'title',label:'Название',isTitle:true,required:true},
+      {type:'string',name:'category',label:'Категория',options:['Flora','B&W','Color','ALT','Custom']},
+      {type:'rich-text',name:'description',label:'История / описание работы'},
+      {type:'image',name:'sketch',label:'Эскиз'},
+      {type:'image',name:'onSkin',label:'Тату на коже'},
+      {type:'image',name:'healed',label:'Зажившая татуировка'},
+      {type:'boolean',name:'featured',label:'Показывать на главной',defaultValue:false},
+      {type:'image',name:'image',label:'Старое фото (совместимость)'}
+    ] },
   ]},
 })
