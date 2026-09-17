@@ -2,10 +2,8 @@
 
 import { useState } from 'react'
 
-const TINA_BRANCH = 'main'
-const TINA_CLIENT_ID = process.env.NEXT_PUBLIC_TINA_CLIENT_ID ?? '(missing)'
-
 import { SiteHeader } from '@/components/site-header'
+import { LightboxImage } from '@/components/lightbox-image'
 import { portfolio } from '../data'
 import { useLanguage } from '@/components/language-provider'
 import { useTinaContent } from '@/components/tina-content'
@@ -25,6 +23,6 @@ export default function PortfolioPage() {
     <div className="section-label">✦ {language === 'fi' ? 'Portfolio / kaikki työt' : 'Portfolio / all work'}</div>
     <h1 className="page-title">{language === 'fi' ? <>Kaikki pienet<br /><span>taikapalat.</span></> : <>All the little<br /><span>magic.</span></>}</h1>
     <div className="filter-row">{filters.map((label, index) => <button key={label} onClick={() => setFilter(index === 0 ? 'All' : label === 'Iholla' ? 'Healed' : label === 'On Skin' ? 'Healed' : label)}>{label}</button>)}</div>
-    <div className="portfolio-grid portfolio-all">{visible.map((item: any) => <div className={`portfolio-card ${item[2]}`} key={item[0]}>{item[3] ? <img src={item[3]} alt={item[0]} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} /> : <span className="art-shape" />}<span className="art-label"><b>{item[0]}</b><small>{item[1]}</small></span></div>)}</div>
+    <div className="portfolio-grid portfolio-all">{visible.map((item: any) => <div className={`portfolio-card ${item[2]}`} key={item[0]}>{item[3] ? <LightboxImage className="portfolio-image" src={item[3]} alt={item[0]} /> : <span className="art-shape" />}<span className="art-label"><b>{item[0]}</b><small>{item[1]}</small></span></div>)}</div>
   </section></main>
 }
