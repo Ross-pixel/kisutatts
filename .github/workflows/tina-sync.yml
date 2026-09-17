@@ -1,0 +1,60 @@
+name: Sync Tina schema lock
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-tina-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.3.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Tina schema lock
+        env:
+          NEXT_PUBLIC_TINA_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_TINA_CLIENT_ID }}
+          TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
+        run: |
+          set +e
+          timeout 30s pnpm exec tinacms dev --noWatch > /tmp/tina-dev.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/tina-dev.log
+          if [ ! -f tina/tina-lock.json ]; then
+            echo "tina/tina-lock.json was not generated"
+            exit 1
+          fi
+          echo "Tina dev exited with status $status; lock file exists, continuing."
+
+      - name: Commit updated Tina lock
+        run: |
+          if git diff --quiet -- tina/tina-lock.json; then
+            echo "Tina lock is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tina/tina-lock.json
+          git commit -m "chore: sync Tina schema lock"
+          git push
