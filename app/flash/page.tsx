@@ -17,7 +17,7 @@ export default function FlashPage() {
   const cms = useTinaContent<any>(FlashDesignsConnectionDocument, { first: 100 }, { flashDesignsConnection: { edges: [] } })
   const cmsDesigns = cms.flashDesignsConnection?.edges?.map((edge: any) => edge.node).filter(Boolean) ?? []
   const displayDesigns = cmsDesigns.length ? cmsDesigns : designs.map((name) => ({ title: name, category: 'Flash', image: null }))
-  return <main className="site-shell"><SiteHeader /><div className="page-wrap">
+  return <main className="site-shell"><SiteHeader /><div className="page-wrap max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <a className="back-link" href="/"> <ArrowLeft size={15} /> {t.pages.backHome}</a>
     <div className="section-label">✦ {t.pages.flashLabel}</div>
     <h1 className="page-title">{t.pages.flashTitle}</h1>

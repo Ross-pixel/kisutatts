@@ -5,7 +5,7 @@ import { useLanguage } from '@/components/language-provider'
 
 export default function FAQPage() {
   const { t } = useLanguage()
-  return <main className="site-shell"><SiteHeader /><section className="section faq-page">
+  return <main className="site-shell"><SiteHeader /><section className="section faq-page max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="section-label">♡ {t.faq.label} / aftercare</div>
     <h1 className="page-title">{t.faq.title}</h1>
     <div className="faq-list">{t.faq.questions.map(([question, answer]) => <article className="faq-item" key={question}><h2>{question}</h2><p>{answer}</p></article>)}</div>
