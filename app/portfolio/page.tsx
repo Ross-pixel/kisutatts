@@ -12,7 +12,7 @@ import { PortfolioConnectionDocument } from '@/tina/__generated__/types'
 type PortfolioItem = {
   title: string
   category: string
-  description?: string
+  description?: unknown
   sketch?: string
   onSkin?: string
   healed?: string
@@ -20,10 +20,27 @@ type PortfolioItem = {
   image?: string
 }
 
+function normalizeImageSrc(src: unknown) {
+  if (typeof src !== 'string' || !src) return null
+  return src.startsWith('/') || src.startsWith('http://') || src.startsWith('https://') ? src : `/${src}`
+}
+
+function richTextToPlainText(value: unknown): string {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(richTextToPlainText).filter(Boolean).join(' ')
+  if (value && typeof value === 'object') {
+    const node = value as { text?: unknown; children?: unknown }
+    if (typeof node.text === 'string') return node.text
+    if (node.children) return richTextToPlainText(node.children)
+  }
+  return ''
+}
+
 function CaseImage({ src, alt, label }: { src?: string; alt: string; label: string }) {
-  if (!src) return null
+  const imageSrc = normalizeImageSrc(src)
+  if (!imageSrc) return null
   return <div className="portfolio-case-media">
-    <LightboxImage className="portfolio-case-image" src={src} alt={alt} />
+    <LightboxImage className="portfolio-case-image" src={imageSrc} alt={alt} />
     <span>{label}</span>
   </div>
 }
@@ -79,6 +96,7 @@ export default function PortfolioPage() {
       <div className="portfolio-cases">
         {visible.map((item, index) => {
           const legacyImage = item.onSkin || item.image
+          const descriptionText = richTextToPlainText(item.description)
           const hasStory = Boolean(item.sketch || item.onSkin || item.healed || item.description)
           return <article className="portfolio-case" key={`${item.title}-${index}`}>
             <div className="portfolio-case-header">
@@ -90,7 +108,7 @@ export default function PortfolioPage() {
               {item.featured && <span className="portfolio-featured">♡ Featured</span>}
             </div>
 
-            {item.description && <p className="portfolio-case-description">{item.description}</p>}
+            {descriptionText && <p className="portfolio-case-description">{descriptionText}</p>}
 
             {hasStory ? <div className="portfolio-case-grid">
               <CaseImage src={item.sketch} alt={`${item.title} sketch`} label={language === 'fi' ? 'Luonnos' : 'Sketch'} />
