@@ -47,13 +47,22 @@ export function LightboxImage({ src, alt, className = '' }: LightboxImageProps) 
         padding: '40px',
       }}
     >
-      <button type="button" className="lightbox-close" onClick={() => setOpen(false)} aria-label="Close image"><X size={24} /></button>
+      <button
+        type="button"
+        className="lightbox-close"
+        onClick={() => setOpen(false)}
+        aria-label="Close image"
+        style={{ zIndex: 10002 }}
+      >
+        <X size={24} />
+      </button>
       <img
         className="lightbox-image"
         src={src}
         alt={alt}
         style={{
           position: 'relative',
+          zIndex: 10001,
           inset: 'auto',
           display: 'block',
           width: 'auto',
