@@ -1,61 +1,18 @@
 /* Final visual polish: keep the existing kisu.tatts visual language intact. */
 
 /* Portfolio labels stay readable over both very dark and very light photos. */
-.portfolio-card .art-label{
-  color:#fff;
-  text-shadow:
-    0 1px 2px rgba(32,25,35,.95),
-    1px 0 2px rgba(32,25,35,.9),
-    -1px 0 2px rgba(32,25,35,.9),
-    0 -1px 2px rgba(32,25,35,.9),
-    0 2px 7px rgba(32,25,35,.75);
-}
+.portfolio-card .art-label{color:#fff;text-shadow:0 1px 2px rgba(32,25,35,.95),1px 0 2px rgba(32,25,35,.9),-1px 0 2px rgba(32,25,35,.9),0 -1px 2px rgba(32,25,35,.9),0 2px 7px rgba(32,25,35,.75)}
 .portfolio-card .art-label small{color:#fff;font-weight:800}
 
-/* Portfolio filters: tactile little chips instead of one continuous line. */
-.portfolio-filters{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:10px;
-}
-.portfolio-filters button{
-  appearance:none;
-  border:1px solid #d8c7d0;
-  border-radius:999px;
-  background:#fffafc;
-  color:#665d63;
-  padding:8px 13px;
-  line-height:1.2;
-  font-size:13px;
-  font-weight:800;
-  cursor:pointer;
-  transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease;
-}
-.portfolio-filters button:hover{
-  color:#8e405d;
-  border-color:#C96B8A;
-  transform:translateY(-1px);
-}
-.portfolio-filters button.active{
-  border-color:#C96B8A;
-  background:#C96B8A;
-  color:#fff;
-  box-shadow:3px 3px #8e405d;
-}
+/* Portfolio filters. */
+.portfolio-filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.portfolio-filters button{appearance:none;border:1px solid #d8c7d0;border-radius:999px;background:#fffafc;color:#665d63;padding:8px 13px;line-height:1.2;font-size:13px;font-weight:800;cursor:pointer;transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease,border-color .18s ease}
+.portfolio-filters button:hover{color:#8e405d;border-color:#C96B8A;transform:translateY(-1px)}
+.portfolio-filters button.active{border-color:#C96B8A;background:#C96B8A;color:#fff;box-shadow:3px 3px #8e405d}
 
-/* Tiny decorative marks. Deliberately subtle and non-interactive. */
-.hero,.about-section,.portfolio-section,.healed-section,.pricing-section,.contact-section{position:relative}
-.mood-deco{
-  position:absolute;
-  z-index:1;
-  pointer-events:none;
-  user-select:none;
-  font-family:'Press Start 2P',monospace;
-  line-height:1;
-  opacity:.42;
-  filter:drop-shadow(2px 2px 0 rgba(231,213,225,.65));
-}
+/* Decorative language: hearts and pixel sparkles. */
+.hero,.section,.page-wrap,.portfolio-page,.faq-page{position:relative}
+.mood-deco{position:absolute;z-index:1;pointer-events:none;user-select:none;font-family:'Press Start 2P',monospace;line-height:1;opacity:.44;filter:drop-shadow(2px 2px 0 rgba(231,213,225,.65))}
 .deco-hero{right:8%;top:18%;font-size:19px;color:#C96B8A;transform:rotate(12deg)}
 .deco-about{right:7%;top:12%;font-size:22px;color:#5B9A82;transform:rotate(-10deg)}
 .deco-portfolio{right:8%;top:9%;font-size:25px;color:#7e6c9b;transform:rotate(15deg)}
@@ -63,26 +20,39 @@
 .deco-flash{right:9%;top:10%;font-size:19px;color:#5B9A82;transform:rotate(-12deg)}
 .deco-contact{right:8%;bottom:14%;font-size:24px;color:#C96B8A;transform:rotate(12deg)}
 
-/* A few quiet sparkles on content pages without adding DOM clutter. */
-.page-wrap,.portfolio-page{position:relative}
-.page-wrap::after,.portfolio-page::after{
-  content:'✧';
-  position:absolute;
-  right:5%;
-  top:105px;
-  color:#C96B8A;
-  opacity:.3;
-  font:18px 'Press Start 2P',monospace;
-  pointer-events:none;
-}
+/* Two extra marks per homepage section without adding more JSX. Together with the
+   explicit mood-deco mark this gives each section a small constellation. */
+.section::before,.section::after,.hero::before,.hero::after{position:absolute;z-index:0;pointer-events:none;user-select:none;font-family:'Press Start 2P',monospace;line-height:1;opacity:.24}
+.section::before{content:'✦';left:3.5%;top:31%;font-size:11px;color:#5B9A82;transform:rotate(-13deg)}
+.section::after{content:'♡';right:3.5%;bottom:22%;font-size:16px;color:#C96B8A;transform:rotate(11deg)}
+.hero::before{content:'♡';left:4%;bottom:19%;font-size:15px;color:#7e6c9b;transform:rotate(-12deg)}
+.hero::after{content:'✧';right:3%;bottom:32%;font-size:13px;color:#5B9A82;transform:rotate(16deg)}
+.about-section::before{content:'✧';top:64%;color:#7e6c9b}.about-section::after{content:'♡';bottom:10%}
+.portfolio-section::before{content:'♡';top:52%;color:#C96B8A}.portfolio-section::after{content:'✦';bottom:9%;color:#5B9A82}
+.healed-section::before{content:'✦';top:58%;color:#7e6c9b}.healed-section::after{content:'✧';bottom:12%;color:#C96B8A}
+.pricing-section::before{content:'♡';top:48%;color:#5B9A82}.pricing-section::after{content:'✦';bottom:15%;color:#7e6c9b}
+.contact-section::before{content:'✧';top:26%;color:#C96B8A}.contact-section::after{content:'♡';bottom:9%;color:#5B9A82}
+
+/* All inner pages get a repeating, very faint decorative field. It lives behind
+   the content and therefore works for portfolio, flash, on-skin and FAQ/aftercare. */
+.page-wrap,.portfolio-page,.faq-page{isolation:isolate}
+.page-wrap::before,.portfolio-page::before,.faq-page::before{content:'';position:absolute;z-index:-1;inset:78px 0 0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='330' viewBox='0 0 260 330'%3E%3Ctext x='20' y='54' font-size='18' fill='%23C96B8A' fill-opacity='.16'%3E%E2%99%A1%3C/text%3E%3Ctext x='205' y='135' font-size='16' fill='%235B9A82' fill-opacity='.16'%3E%E2%9C%A6%3C/text%3E%3Ctext x='74' y='258' font-size='15' fill='%237e6c9b' fill-opacity='.14'%3E%E2%9C%A7%3C/text%3E%3Ctext x='224' y='306' font-size='12' fill='%23C96B8A' fill-opacity='.12'%3E%E2%99%A1%3C/text%3E%3C/svg%3E");background-repeat:repeat}
+.page-wrap::after,.portfolio-page::after,.faq-page::after{content:'✧  ♡';position:absolute;right:5%;top:105px;color:#C96B8A;opacity:.34;font:16px 'Press Start 2P',monospace;letter-spacing:8px;pointer-events:none}
+
+/* Cards get occasional tiny accents too, kept outside the actual image content. */
+.portfolio-case:nth-child(odd)::after{content:'✦';position:absolute;right:18px;bottom:13px;color:#5B9A82;opacity:.28;font:11px 'Press Start 2P',monospace;pointer-events:none}
+.portfolio-case{position:relative}
+.flash-row:nth-child(3n)::after{content:'♡';color:#C96B8A;opacity:.34;font-size:12px;margin-left:4px}
+.aftercare-card:nth-child(even){position:relative}
+.aftercare-card:nth-child(even)::after{content:'✧';position:absolute;right:15px;top:12px;color:#7e6c9b;opacity:.3;font-size:13px}
 
 @media(max-width:560px){
-  .portfolio-filters{gap:8px;margin-bottom:34px}
-  .portfolio-filters button{padding:8px 11px;font-size:12px}
-  .mood-deco{opacity:.3;transform:scale(.82)}
-  .deco-hero{right:5%;top:15%}
-  .deco-about,.deco-portfolio,.deco-onskin,.deco-flash{right:4%}
-  .page-wrap::after,.portfolio-page::after{right:4%;top:96px;font-size:14px}
+  .portfolio-filters{gap:8px;margin-bottom:34px}.portfolio-filters button{padding:8px 11px;font-size:12px}
+  .mood-deco{opacity:.34;transform:scale(.82)}
+  .deco-hero{right:5%;top:15%}.deco-about,.deco-portfolio,.deco-onskin,.deco-flash{right:4%}
+  .section::before{left:1.5%;font-size:9px}.section::after{right:1.5%;font-size:12px}
+  .hero::before{left:2%}.hero::after{right:2%}
+  .page-wrap::after,.portfolio-page::after,.faq-page::after{right:3%;top:96px;font-size:11px;letter-spacing:5px}
+  .page-wrap::before,.portfolio-page::before,.faq-page::before{background-size:220px 280px;opacity:.8}
 }
-
 @media(prefers-reduced-motion:reduce){.portfolio-filters button{transition:none}}
