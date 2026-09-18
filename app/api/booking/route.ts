@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerConfig } from '@/lib/supabase/config'
+import { sendBookingTelegramNotification } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
@@ -82,6 +83,14 @@ export async function POST(request: Request) {
       const parsed = JSON.parse(raw)
       if (typeof parsed === 'string') requestId = parsed
     } catch {}
+
+    try {
+      await sendBookingTelegramNotification(requestId)
+    } catch (error) {
+      // The database is the source of truth. A Telegram outage or configuration
+      // problem must never make a successfully stored booking look unsuccessful.
+      console.error('Telegram booking notification error:', error)
+    }
 
     return NextResponse.json({ ok: true, requestId }, { status: 201 })
   } catch (error) {
