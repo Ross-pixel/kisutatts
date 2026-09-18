@@ -20,7 +20,6 @@ export async function GET() {
       {
         headers: {
           apikey: publishableKey,
-          Authorization: `Bearer ${publishableKey}`,
         },
         cache: 'no-store',
       },
