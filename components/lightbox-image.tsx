@@ -38,8 +38,14 @@ export function LightboxImage({ src, alt, className = '' }: LightboxImageProps) 
   ) : null
 
   return <>
-    <button type="button" className={`lightbox-trigger ${className}`} onClick={() => setOpen(true)} aria-label={`Open ${alt}`}>
-      <img src={src} alt={alt} />
+    <button
+      type="button"
+      className={`lightbox-trigger ${className}`}
+      style={{ overflow: 'hidden', borderRadius: 'inherit' }}
+      onClick={() => setOpen(true)}
+      aria-label={`Open ${alt}`}
+    >
+      <img src={src} alt={alt} style={{ borderRadius: 'inherit' }} />
     </button>
     {lightbox}
   </>
