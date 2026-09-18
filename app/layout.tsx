@@ -2,6 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import './polish.css'
+import './booking-upload.css'
 import { LanguageProvider } from '@/components/language-provider'
 
 export const metadata: Metadata = {
