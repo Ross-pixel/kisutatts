@@ -45,24 +45,16 @@ export function LightboxImage({ src, alt, className = '' }: LightboxImageProps) 
         alignItems: 'center',
         justifyContent: 'center',
         padding: '40px',
+        zIndex: 10000,
       }}
     >
-      <button
-        type="button"
-        className="lightbox-close"
-        onClick={() => setOpen(false)}
-        aria-label="Close image"
-        style={{ zIndex: 10002 }}
-      >
-        <X size={24} />
-      </button>
       <img
         className="lightbox-image"
         src={src}
         alt={alt}
         style={{
           position: 'relative',
-          zIndex: 10001,
+          zIndex: 1,
           inset: 'auto',
           display: 'block',
           width: 'auto',
@@ -76,6 +68,24 @@ export function LightboxImage({ src, alt, className = '' }: LightboxImageProps) 
         }}
         onClick={(event) => event.stopPropagation()}
       />
+      <button
+        type="button"
+        className="lightbox-close"
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen(false)
+        }}
+        aria-label="Close image"
+        style={{
+          position: 'fixed',
+          top: 'max(18px, env(safe-area-inset-top))',
+          right: 'max(18px, env(safe-area-inset-right))',
+          zIndex: 2147483647,
+          isolation: 'isolate',
+        }}
+      >
+        <X size={24} />
+      </button>
     </div>,
     document.body,
   ) : null
