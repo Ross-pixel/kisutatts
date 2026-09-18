@@ -11,6 +11,11 @@ import { FlashDesignsConnectionDocument } from '@/tina/__generated__/types'
 
 const designs = ['stars', 'ghost', 'mushroom', 'cat', 'jellyfish', 'witch', 'bug', 'skeleton', 'heart', 'sword']
 
+function normalizeImageSrc(src: unknown) {
+  if (typeof src !== 'string' || !src) return null
+  return src.startsWith('/') || src.startsWith('http://') || src.startsWith('https://') ? src : `/${src}`
+}
+
 export default function FlashPage() {
   const { language } = useLanguage()
   const t = translations[language]
@@ -26,7 +31,13 @@ export default function FlashPage() {
     <div className="flash-list full-flash-list">{rows.map((row, index) => <div className="flash-row" key={row[0]}><strong>{prices[index]}</strong><span><b>{row[0]}</b><small>{row[1]}</small></span><i>+</i></div>)}</div>
     <p className="price-note">{t.pricing.note}</p>
     <div className="section-label page-sub-label">♡ {t.pages.flashGallery}</div>
-    <div className="flash-gallery">{displayDesigns.map((design: any, index: number) => <div className={`flash-tile art-${designs[index % designs.length]}`} style={{ position: 'relative' }} key={design.id ?? design.title ?? index}>{design.image ? <LightboxImage className="portfolio-image" src={design.image.startsWith('/') ? design.image : `/${design.image}`} alt={design.title ?? 'Flash design'} /> : <span className="art-shape" />}<small>{design.title ?? rows[index % rows.length][0]}</small></div>)}</div>
+    <div className="flash-gallery">{displayDesigns.map((design: any, index: number) => {
+      const imageSrc = normalizeImageSrc(design.image)
+      return <div className={`flash-tile art-${designs[index % designs.length]}`} style={{ position: 'relative' }} key={design.id ?? design.title ?? index}>
+        {imageSrc ? <LightboxImage className="portfolio-image" src={imageSrc} alt={design.title ?? 'Flash design'} /> : <span className="art-shape" />}
+        <small>{design.title ?? rows[index % rows.length][0]}</small>
+      </div>
+    })}</div>
     <a className="text-link" href="/">{t.pages.backHome} <ArrowUpRight size={15} /></a>
   </div></main>
 }
