@@ -32,7 +32,13 @@ export function LightboxImage({ src, alt, className = '' }: LightboxImageProps) 
   const lightbox = open && mounted ? createPortal(
     <div className="lightbox" role="dialog" aria-modal="true" aria-label={alt} onClick={() => setOpen(false)}>
       <button type="button" className="lightbox-close" onClick={() => setOpen(false)} aria-label="Close image"><X size={24} /></button>
-      <img className="lightbox-image" src={src} alt={alt} onClick={(event) => event.stopPropagation()} />
+      <img
+        className="lightbox-image"
+        src={src}
+        alt={alt}
+        style={{ position: 'static', inset: 'auto', width: 'auto', height: 'auto', padding: 0 }}
+        onClick={(event) => event.stopPropagation()}
+      />
     </div>,
     document.body,
   ) : null
