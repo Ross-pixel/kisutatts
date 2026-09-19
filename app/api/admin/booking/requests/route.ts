@@ -45,6 +45,24 @@ function helsinkiLocalToUtc(date: string, time: string) {
   return utc
 }
 
+async function callRpc(
+  supabaseUrl: string,
+  secretKey: string,
+  rpc: string,
+  body: Record<string, unknown>,
+) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpc}`, {
+    method: 'POST',
+    headers: {
+      apikey: secretKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  })
+  return { response, raw: await response.text() }
+}
+
 export async function POST(request: Request) {
   if (!getTelegramAdminFromRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -55,7 +73,7 @@ export async function POST(request: Request) {
     const requestId = clean(body?.requestId)
     const action = clean(body?.action)
 
-    if (!UUID_RE.test(requestId) || !['confirm', 'reject', 'cancel', 'adjust'].includes(action)) {
+    if (!UUID_RE.test(requestId) || !['confirm', 'reject', 'cancel', 'adjust', 'complete', 'note'].includes(action)) {
       return NextResponse.json({ error: 'Invalid booking action.' }, { status: 400 })
     }
 
@@ -72,21 +90,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Check the date and time range.' }, { status: 400 })
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/rpc/adjust_booking_request_schedule`, {
-        method: 'POST',
-        headers: {
-          apikey: secretKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { response, raw } = await callRpc(
+        supabaseUrl,
+        secretKey,
+        'adjust_booking_request_schedule',
+        {
           p_request_id: requestId,
           p_starts_at: startsAt.toISOString(),
           p_ends_at: endsAt.toISOString(),
-        }),
-        cache: 'no-store',
-      })
+        },
+      )
 
-      const raw = await response.text()
       if (!response.ok) {
         let message = raw
         try {
@@ -114,23 +128,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, status: 'scheduled' })
     }
 
+    if (action === 'note') {
+      const note = typeof body?.note === 'string' ? body.note.trim() : ''
+      if (note.length > 2000) {
+        return NextResponse.json({ error: 'Admin note is too long.' }, { status: 400 })
+      }
+
+      const { response, raw } = await callRpc(
+        supabaseUrl,
+        secretKey,
+        'update_booking_admin_note',
+        { p_request_id: requestId, p_note: note },
+      )
+
+      if (!response.ok) {
+        let message = raw
+        try { message = JSON.parse(raw)?.message ?? raw } catch {}
+        if (message.includes('REQUEST_NOT_FOUND')) {
+          return NextResponse.json({ error: 'Booking request not found.' }, { status: 404 })
+        }
+        if (message.includes('ADMIN_NOTE_TOO_LONG')) {
+          return NextResponse.json({ error: 'Admin note is too long.' }, { status: 400 })
+        }
+        console.error('Booking admin note error:', response.status, raw)
+        return NextResponse.json({ error: 'Unable to save admin note.' }, { status: 502 })
+      }
+
+      return NextResponse.json({ ok: true, note })
+    }
+
     const rpc = action === 'confirm'
       ? 'confirm_booking_request'
       : action === 'reject'
         ? 'reject_booking_request'
-        : 'cancel_booking_request'
+        : action === 'cancel'
+          ? 'cancel_booking_request'
+          : 'complete_booking_request'
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpc}`, {
-      method: 'POST',
-      headers: {
-        apikey: secretKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ p_request_id: requestId }),
-      cache: 'no-store',
-    })
+    const { response, raw } = await callRpc(
+      supabaseUrl,
+      secretKey,
+      rpc,
+      { p_request_id: requestId },
+    )
 
-    const raw = await response.text()
     if (!response.ok) {
       let message = raw
       try {
@@ -142,7 +183,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'This request was already processed.' }, { status: 409 })
       }
       if (message.includes('REQUEST_NOT_CONFIRMED')) {
-        return NextResponse.json({ error: 'Only a confirmed booking can be cancelled.' }, { status: 409 })
+        return NextResponse.json({ error: action === 'complete' ? 'Only a confirmed booking can be completed.' : 'Only a confirmed booking can be cancelled.' }, { status: 409 })
       }
       if (message.includes('REQUEST_NOT_FOUND')) {
         return NextResponse.json({ error: 'Booking request not found.' }, { status: 404 })
@@ -152,7 +193,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unable to update booking request.' }, { status: 502 })
     }
 
-    const status = action === 'confirm' ? 'confirmed' : action === 'reject' ? 'rejected' : 'cancelled'
+    const status = action === 'confirm'
+      ? 'confirmed'
+      : action === 'reject'
+        ? 'rejected'
+        : action === 'cancel'
+          ? 'cancelled'
+          : 'completed'
+
     return NextResponse.json({ ok: true, status })
   } catch (error) {
     console.error('Booking admin request action API error:', error)
