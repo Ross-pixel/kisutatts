@@ -32,6 +32,12 @@ type BookingAttachmentRow = {
   uploaded_at: string | null
 }
 
+type DownloadedBookingAttachment = {
+  blob: Blob
+  filename: string
+  mimeType: string
+}
+
 function telegramToken() {
   return process.env.TELEGRAM_BOT_TOKEN?.trim() || ''
 }
@@ -239,7 +245,7 @@ async function loadCompletedBookingAttachments(requestId: string) {
   return await response.json() as BookingAttachmentRow[]
 }
 
-async function downloadBookingAttachment(attachment: BookingAttachmentRow) {
+async function downloadBookingAttachment(attachment: BookingAttachmentRow): Promise<DownloadedBookingAttachment> {
   const { supabaseUrl, secretKey } = getSupabaseServerConfig()
   const signResponse = await fetch(
     `${supabaseUrl}/storage/v1/object/sign/${BOOKING_REFERENCE_BUCKET}/${encodeStoragePath(attachment.storage_path)}`,
@@ -280,21 +286,22 @@ async function downloadBookingAttachment(attachment: BookingAttachmentRow) {
   }
 }
 
-async function sendTelegramAttachment(
-  chatId: string,
-  attachment: BookingAttachmentRow,
-  index: number,
-  total: number,
-) {
-  const { blob, filename, mimeType } = await downloadBookingAttachment(attachment)
-  const caption = trimTelegramText(`Reference ${index + 1}/${total} · ${filename}`, 1000)
-  const photoLike = mimeType === 'image/jpeg' || mimeType === 'image/png' || mimeType === 'image/webp'
+function isTelegramPhoto(attachment: DownloadedBookingAttachment) {
+  return attachment.mimeType === 'image/jpeg'
+    || attachment.mimeType === 'image/png'
+    || attachment.mimeType === 'image/webp'
+}
 
-  if (photoLike) {
+async function sendSingleTelegramAttachment(
+  chatId: string,
+  attachment: DownloadedBookingAttachment,
+  caption: string,
+) {
+  if (isTelegramPhoto(attachment)) {
     const photoBody = new FormData()
     photoBody.append('chat_id', chatId)
-    photoBody.append('caption', caption)
-    photoBody.append('photo', blob, filename)
+    photoBody.append('caption', trimTelegramText(caption, 1000))
+    photoBody.append('photo', attachment.blob, attachment.filename)
 
     try {
       await telegramMultipartApi('sendPhoto', photoBody)
@@ -306,9 +313,60 @@ async function sendTelegramAttachment(
 
   const documentBody = new FormData()
   documentBody.append('chat_id', chatId)
-  documentBody.append('caption', caption)
-  documentBody.append('document', blob, filename)
+  documentBody.append('caption', trimTelegramText(caption, 1000))
+  documentBody.append('document', attachment.blob, attachment.filename)
   await telegramMultipartApi('sendDocument', documentBody)
+}
+
+async function sendTelegramAlbum(
+  chatId: string,
+  attachments: DownloadedBookingAttachment[],
+  type: 'photo' | 'document',
+) {
+  if (attachments.length < 2) {
+    const attachment = attachments[0]
+    if (attachment) {
+      await sendSingleTelegramAttachment(chatId, attachment, `Reference · ${attachment.filename}`)
+    }
+    return
+  }
+
+  const body = new FormData()
+  body.append('chat_id', chatId)
+
+  const media = attachments.map((attachment, index) => {
+    const field = `file${index}`
+    body.append(field, attachment.blob, attachment.filename)
+    return {
+      type,
+      media: `attach://${field}`,
+      ...(index === 0 ? { caption: `Reference ${type === 'photo' ? 'photos' : 'files'} · ${attachments.length}` } : {}),
+    }
+  })
+
+  body.append('media', JSON.stringify(media))
+  await telegramMultipartApi('sendMediaGroup', body)
+}
+
+async function sendReferenceGroup(
+  chatId: string,
+  attachments: DownloadedBookingAttachment[],
+  type: 'photo' | 'document',
+) {
+  if (attachments.length === 0) return
+
+  try {
+    await sendTelegramAlbum(chatId, attachments, type)
+  } catch (error) {
+    console.warn(`Telegram ${type} album failed; retrying attachments individually:`, error)
+    for (let index = 0; index < attachments.length; index += 1) {
+      await sendSingleTelegramAttachment(
+        chatId,
+        attachments[index],
+        `Reference ${index + 1}/${attachments.length} · ${attachments[index].filename}`,
+      )
+    }
+  }
 }
 
 export async function sendBookingTelegramNotification(requestId: string) {
@@ -361,9 +419,16 @@ export async function sendBookingReferenceTelegramAttachments(requestId: string)
       return { skipped: true as const, reason: 'no-attachments' as const }
     }
 
-    for (let index = 0; index < attachments.length; index += 1) {
-      await sendTelegramAttachment(chatId, attachments[index], index, attachments.length)
+    const downloaded: DownloadedBookingAttachment[] = []
+    for (const attachment of attachments) {
+      downloaded.push(await downloadBookingAttachment(attachment))
     }
+
+    const photos = downloaded.filter(isTelegramPhoto)
+    const documents = downloaded.filter((attachment) => !isTelegramPhoto(attachment))
+
+    await sendReferenceGroup(chatId, photos, 'photo')
+    await sendReferenceGroup(chatId, documents, 'document')
 
     return { skipped: false as const, count: attachments.length }
   } catch (error) {
