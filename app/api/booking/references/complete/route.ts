@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerConfig } from '@/lib/supabase/config'
+import { sendBookingReferenceTelegramAttachments } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -45,6 +47,15 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json({ error: 'Unable to finish reference upload.' }, { status: 502 })
+    }
+
+    // The claim inside this helper succeeds only after every prepared reference
+    // for the booking has finished uploading. Earlier completion calls are cheap no-ops.
+    // Telegram is auxiliary: a delivery failure must not invalidate a stored reference.
+    try {
+      await sendBookingReferenceTelegramAttachments(requestId)
+    } catch (error) {
+      console.error('Telegram booking reference delivery error:', error)
     }
 
     return NextResponse.json({ ok: true })
