@@ -14,7 +14,7 @@ export type TelegramAdminIdentity = {
   authDate: number
 }
 
-const MAX_INIT_DATA_AGE_SECONDS = 10 * 60
+const MAX_INIT_DATA_AGE_SECONDS = 6 * 60 * 60
 
 function botToken() {
   return process.env.TELEGRAM_BOT_TOKEN?.trim() || ''
