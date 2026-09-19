@@ -499,6 +499,37 @@ export function BookingAdmin() {
     }
   }
 
+  async function clearSelectedDay() {
+    if (!initData || reusableSelectedDaySlots.length === 0) return
+    const activeCount = selectedDaySlots.length - reusableSelectedDaySlots.length
+    const activeNote = activeCount > 0
+      ? ` ${activeCount} Pending/Booked client appointment${activeCount === 1 ? '' : 's'} will stay untouched.`
+      : ''
+    if (!window.confirm(`Clear all Available and Blocked windows from ${formatCalendarDate(selectedDate, true)}?${activeNote}`)) return
+
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/booking/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': initData,
+        },
+        body: JSON.stringify({ action: 'clear', date: selectedDate }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.error || 'Unable to clear this day.')
+      setShowAddSlot(false)
+      setEditingSlotId(null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to clear this day.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function runRequestAction(bookingRequest: BookingRequest, action: 'confirm' | 'reject' | 'cancel') {
     if (!initData) return
     if (action === 'reject' && !window.confirm(`Decline ${bookingRequest.name}'s request and release the slot?`)) return
@@ -673,6 +704,7 @@ export function BookingAdmin() {
           </select>
           <button type="button" className="admin-template-apply" disabled={busy || !selectedTemplateId || selectedDate < initialDate} onClick={() => void applySelectedTemplate()}>Apply</button>
           <button type="button" className="admin-template-delete" disabled={busy || !selectedTemplateId} onClick={() => void deleteSelectedTemplate()}>Delete</button>
+          <button type="button" className="admin-template-delete" disabled={busy || reusableSelectedDaySlots.length === 0} onClick={() => void clearSelectedDay()}>Clear day</button>
         </div>
         {selectedTemplate ? (
           <div className="admin-template-preview">
