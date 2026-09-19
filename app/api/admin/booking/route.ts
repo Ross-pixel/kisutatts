@@ -16,6 +16,15 @@ type BookingAttachmentRow = {
   uploaded_at: string | null
 }
 
+type BookingDayTemplateSlotRow = {
+  id: string
+  template_id: string
+  start_time: string
+  end_time: string
+  status: string
+  note: string | null
+}
+
 async function loadJson(url: string, secretKey: string) {
   const response = await fetch(url, {
     headers: { apikey: secretKey },
@@ -76,7 +85,7 @@ export async function GET(request: Request) {
 
   try {
     const { supabaseUrl, secretKey } = getSupabaseServerConfig()
-    const [slots, requests, attachments] = await Promise.all([
+    const [slots, requests, attachments, templates, templateSlots] = await Promise.all([
       loadJson(
         `${supabaseUrl}/rest/v1/booking_slots?select=id,starts_at,ends_at,status,note,created_at,updated_at&order=starts_at.asc`,
         secretKey,
@@ -87,6 +96,14 @@ export async function GET(request: Request) {
       ),
       loadJson(
         `${supabaseUrl}/rest/v1/booking_attachments?select=id,request_id,storage_path,original_filename,mime_type,file_size,uploaded_at&uploaded_at=not.is.null&order=created_at.asc`,
+        secretKey,
+      ),
+      loadJson(
+        `${supabaseUrl}/rest/v1/booking_day_templates?select=id,name,source_date,created_at&order=name.asc`,
+        secretKey,
+      ),
+      loadJson(
+        `${supabaseUrl}/rest/v1/booking_day_template_slots?select=id,template_id,start_time,end_time,status,note&order=start_time.asc`,
         secretKey,
       ),
     ])
@@ -114,6 +131,13 @@ export async function GET(request: Request) {
       attachmentsByRequest.set(requestId, current)
     }
 
+    const templateSlotsByTemplate = new Map<string, BookingDayTemplateSlotRow[]>()
+    for (const item of templateSlots as BookingDayTemplateSlotRow[]) {
+      const current = templateSlotsByTemplate.get(item.template_id) || []
+      current.push(item)
+      templateSlotsByTemplate.set(item.template_id, current)
+    }
+
     return NextResponse.json({
       admin: {
         id: identity.user.id,
@@ -124,6 +148,10 @@ export async function GET(request: Request) {
       requests: (requests as Array<Record<string, unknown> & { id: string }>).map((item) => ({
         ...item,
         attachments: attachmentsByRequest.get(item.id) || [],
+      })),
+      templates: (templates as Array<Record<string, unknown> & { id: string }>).map((template) => ({
+        ...template,
+        slots: templateSlotsByTemplate.get(template.id) || [],
       })),
     })
   } catch (error) {
