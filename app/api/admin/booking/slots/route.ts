@@ -11,6 +11,11 @@ function clean(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+function isOverlapError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return message.includes('booking_slots_no_overlap') || message.includes('23P01') || message.includes('exclusion constraint')
+}
+
 function helsinkiOffsetMinutes(date: Date) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Europe/Helsinki',
@@ -93,6 +98,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, slot: Array.isArray(rows) ? rows[0] : rows })
   } catch (error) {
+    if (isOverlapError(error)) {
+      return NextResponse.json({ error: 'That time overlaps another calendar slot.' }, { status: 409 })
+    }
     console.error('Booking admin slot create error:', error)
     return NextResponse.json({ error: 'Unable to create slot.' }, { status: 502 })
   }
@@ -111,11 +119,31 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Invalid slot update.' }, { status: 400 })
     }
 
+    const patch: Record<string, unknown> = { status }
+    const date = clean(body?.date)
+    const startTime = clean(body?.startTime)
+    const endTime = clean(body?.endTime)
+    const hasSchedule = Boolean(date || startTime || endTime)
+
+    if (hasSchedule) {
+      const startsAt = helsinkiLocalToUtc(date, startTime)
+      const endsAt = helsinkiLocalToUtc(date, endTime)
+      if (!startsAt || !endsAt || endsAt <= startsAt) {
+        return NextResponse.json({ error: 'Check the date and time range.' }, { status: 400 })
+      }
+      patch.starts_at = startsAt.toISOString()
+      patch.ends_at = endsAt.toISOString()
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'note')) {
+      patch.note = clean(body?.note) || null
+    }
+
     const { supabaseUrl, secretKey } = getSupabaseServerConfig()
     const rows = await supabaseWrite(
       `${supabaseUrl}/rest/v1/booking_slots?id=eq.${encodeURIComponent(id)}&status=in.(available,blocked)`,
       secretKey,
-      { method: 'PATCH', body: JSON.stringify({ status }) },
+      { method: 'PATCH', body: JSON.stringify(patch) },
     )
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -124,6 +152,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ ok: true, slot: rows[0] })
   } catch (error) {
+    if (isOverlapError(error)) {
+      return NextResponse.json({ error: 'That time overlaps another calendar slot.' }, { status: 409 })
+    }
     console.error('Booking admin slot update error:', error)
     return NextResponse.json({ error: 'Unable to update slot.' }, { status: 502 })
   }
