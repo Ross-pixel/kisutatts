@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         secretKey,
       ),
       loadJson(
-        `${supabaseUrl}/rest/v1/booking_requests?select=id,slot_id,name,contact,idea,budget,status,requested_starts_at,requested_ends_at,scheduled_starts_at,scheduled_ends_at,created_at,updated_at&order=created_at.desc&limit=100`,
+        `${supabaseUrl}/rest/v1/booking_requests?select=id,slot_id,name,contact,idea,budget,status,admin_note,completed_at,privacy_accepted_at,privacy_notice_version,requested_starts_at,requested_ends_at,scheduled_starts_at,scheduled_ends_at,created_at,updated_at&order=created_at.desc&limit=100`,
         secretKey,
       ),
       loadJson(
