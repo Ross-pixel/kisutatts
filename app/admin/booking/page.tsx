@@ -1,6 +1,7 @@
 import Script from 'next/script'
 import { BookingAdmin } from '@/components/booking-admin'
 import '@/app/admin-booking.css'
+import '@/app/admin-booking-extra.css'
 
 export default function BookingAdminPage() {
   return (
