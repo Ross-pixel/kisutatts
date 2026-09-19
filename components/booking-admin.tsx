@@ -37,10 +37,24 @@ type BookingRequest = {
   attachments: BookingAttachment[]
 }
 
+type BookingDayTemplate = {
+  id: string
+  name: string
+  source_date: string | null
+  slots: Array<{
+    id: string
+    start_time: string
+    end_time: string
+    status: 'available' | 'blocked'
+    note: string | null
+  }>
+}
+
 type AdminPayload = {
   admin: { id: number; firstName: string; username: string }
   slots: BookingSlot[]
   requests: BookingRequest[]
+  templates: BookingDayTemplate[]
 }
 
 declare global {
@@ -112,16 +126,6 @@ function formatMonth(monthKey: string) {
   }).format(date)
 }
 
-function formatSlot(slot: BookingSlot) {
-  const date = new Intl.DateTimeFormat('en-FI', {
-    timeZone: HELSINKI,
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  }).format(new Date(slot.starts_at))
-  return `${date} · ${timeFromIso(slot.starts_at)}–${timeFromIso(slot.ends_at)}`
-}
-
 function formatRange(startsAt: string, endsAt: string) {
   const date = new Intl.DateTimeFormat('en-FI', {
     timeZone: HELSINKI,
@@ -175,6 +179,10 @@ function schedulesDiffer(request: BookingRequest) {
     || new Date(request.requested_ends_at).getTime() !== new Date(request.scheduled_ends_at).getTime()
 }
 
+function templateTime(value: string) {
+  return value.slice(0, 5)
+}
+
 export function BookingAdmin() {
   const initialDate = todayHelsinki()
   const [initData, setInitData] = useState('')
@@ -187,6 +195,8 @@ export function BookingAdmin() {
   const [showAddSlot, setShowAddSlot] = useState(false)
   const [editingSlotId, setEditingSlotId] = useState<string | null>(null)
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null)
+  const [selectedTemplateId, setSelectedTemplateId] = useState('')
+  const [copiedRequestId, setCopiedRequestId] = useState<string | null>(null)
 
   useEffect(() => {
     let attempts = 0
@@ -231,6 +241,17 @@ export function BookingAdmin() {
     if (initData) void load(initData)
   }, [initData])
 
+  useEffect(() => {
+    const templates = payload?.templates || []
+    if (templates.length === 0) {
+      setSelectedTemplateId('')
+      return
+    }
+    if (!templates.some((template) => template.id === selectedTemplateId)) {
+      setSelectedTemplateId(templates[0].id)
+    }
+  }, [payload, selectedTemplateId])
+
   const slotsById = useMemo(() => new Map((payload?.slots || []).map((slot) => [slot.id, slot])), [payload])
   const activeRequests = useMemo(
     () => (payload?.requests || [])
@@ -259,6 +280,8 @@ export function BookingAdmin() {
     return map
   }, [payload])
   const selectedDaySlots = slotsByDate.get(selectedDate) || []
+  const reusableSelectedDaySlots = selectedDaySlots.filter((slot) => slot.status === 'available' || slot.status === 'blocked')
+  const selectedTemplate = (payload?.templates || []).find((template) => template.id === selectedTemplateId)
   const cells = useMemo(() => calendarCells(monthKey), [monthKey])
   const monthPrefix = monthKey.slice(0, 7)
   const monthSlots = useMemo(
@@ -399,9 +422,87 @@ export function BookingAdmin() {
     }
   }
 
-  async function runRequestAction(bookingRequest: BookingRequest, action: 'confirm' | 'reject') {
+  async function saveSelectedDayTemplate() {
+    if (!initData || reusableSelectedDaySlots.length === 0) return
+    const suggested = `${formatCalendarDate(selectedDate)} schedule`
+    const name = window.prompt('Template name:', suggested)?.trim()
+    if (!name) return
+
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/booking/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': initData,
+        },
+        body: JSON.stringify({ action: 'save', name, date: selectedDate }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.error || 'Unable to save day template.')
+      await load()
+      if (body?.templateId) setSelectedTemplateId(body.templateId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save day template.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function applySelectedTemplate() {
+    if (!initData || !selectedTemplateId) return
+    const template = (payload?.templates || []).find((item) => item.id === selectedTemplateId)
+    if (!template) return
+    if (!window.confirm(`Apply “${template.name}” to ${formatCalendarDate(selectedDate, true)}? Existing windows will never be overwritten.`)) return
+
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/booking/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': initData,
+        },
+        body: JSON.stringify({ action: 'apply', templateId: selectedTemplateId, date: selectedDate }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.error || 'Unable to apply day template.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to apply day template.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function deleteSelectedTemplate() {
+    if (!initData || !selectedTemplate) return
+    if (!window.confirm(`Delete the template “${selectedTemplate.name}”? Calendar days already created from it will stay unchanged.`)) return
+
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch(`/api/admin/booking/templates?id=${encodeURIComponent(selectedTemplate.id)}`, {
+        method: 'DELETE',
+        headers: { 'x-telegram-init-data': initData },
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.error || 'Unable to delete template.')
+      setSelectedTemplateId('')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to delete template.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function runRequestAction(bookingRequest: BookingRequest, action: 'confirm' | 'reject' | 'cancel') {
     if (!initData) return
     if (action === 'reject' && !window.confirm(`Decline ${bookingRequest.name}'s request and release the slot?`)) return
+    if (action === 'cancel' && !window.confirm(`Cancel ${bookingRequest.name}'s confirmed booking and release the scheduled time?`)) return
 
     setBusy(true)
     setError('')
@@ -458,6 +559,16 @@ export function BookingAdmin() {
       setError(err instanceof Error ? err.message : 'Unable to adjust booking time.')
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function copyContact(bookingRequest: BookingRequest) {
+    try {
+      await navigator.clipboard.writeText(bookingRequest.contact)
+      setCopiedRequestId(bookingRequest.id)
+      window.setTimeout(() => setCopiedRequestId((current) => current === bookingRequest.id ? null : current), 1500)
+    } catch {
+      setError('Could not copy the contact. Press and hold the username instead.')
     }
   }
 
@@ -551,6 +662,24 @@ export function BookingAdmin() {
           >＋ Add slot</button>
         </div>
 
+        <div className="admin-template-tools">
+          <div className="admin-template-copy">
+            <b>Day templates</b>
+            <span>Save and reuse Available / Blocked windows. Client bookings are never copied.</span>
+          </div>
+          <button type="button" className="admin-template-save" disabled={busy || reusableSelectedDaySlots.length === 0} onClick={() => void saveSelectedDayTemplate()}>♡ Save day</button>
+          <select value={selectedTemplateId} disabled={busy || (payload?.templates || []).length === 0} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+            {(payload?.templates || []).length === 0 ? <option value="">No templates yet</option> : (payload?.templates || []).map((template) => <option value={template.id} key={template.id}>{template.name}</option>)}
+          </select>
+          <button type="button" className="admin-template-apply" disabled={busy || !selectedTemplateId || selectedDate < initialDate} onClick={() => void applySelectedTemplate()}>Apply</button>
+          <button type="button" className="admin-template-delete" disabled={busy || !selectedTemplateId} onClick={() => void deleteSelectedTemplate()}>Delete</button>
+        </div>
+        {selectedTemplate ? (
+          <div className="admin-template-preview">
+            {selectedTemplate.slots.map((slot) => <span key={slot.id}><i className={`dot-${slot.status}`} />{templateTime(slot.start_time)}–{templateTime(slot.end_time)} {slot.status}</span>)}
+          </div>
+        ) : null}
+
         {selectedDate < initialDate ? <p className="admin-day-hint">Past dates are view-only.</p> : null}
 
         {showAddSlot ? (
@@ -611,7 +740,12 @@ export function BookingAdmin() {
             return (
               <article className="admin-request" key={bookingRequest.id}>
                 <div className="admin-request-top">
-                  <div><strong>{bookingRequest.name}</strong><span>{bookingRequest.contact}</span></div>
+                  <div>
+                    <strong>{bookingRequest.name}</strong>
+                    <button className="admin-copy-contact" type="button" onClick={() => void copyContact(bookingRequest)} title="Copy contact">
+                      <span>{bookingRequest.contact}</span><small>{copiedRequestId === bookingRequest.id ? 'Copied ✓' : 'Copy'}</small>
+                    </button>
+                  </div>
                   <span className={`admin-status admin-status-${bookingRequest.status}`}>{bookingRequest.status}</span>
                 </div>
 
@@ -659,6 +793,7 @@ export function BookingAdmin() {
                   {bookingRequest.status === 'pending' ? <button className="admin-confirm" type="button" disabled={busy} onClick={() => void runRequestAction(bookingRequest, 'confirm')}>✓ Confirm</button> : null}
                   <button className="admin-adjust" type="button" disabled={busy} onClick={() => setEditingRequestId((current) => current === bookingRequest.id ? null : bookingRequest.id)}>↔ Adjust time</button>
                   {bookingRequest.status === 'pending' ? <button className="admin-decline" type="button" disabled={busy} onClick={() => void runRequestAction(bookingRequest, 'reject')}>✕ Decline</button> : null}
+                  {bookingRequest.status === 'confirmed' ? <button className="admin-cancel-booking" type="button" disabled={busy} onClick={() => void runRequestAction(bookingRequest, 'cancel')}>✕ Cancel booking</button> : null}
                 </div>
               </article>
             )
