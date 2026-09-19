@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const requestId = clean(body?.requestId)
     const action = clean(body?.action)
 
-    if (!UUID_RE.test(requestId) || !['confirm', 'reject', 'adjust'].includes(action)) {
+    if (!UUID_RE.test(requestId) || !['confirm', 'reject', 'cancel', 'adjust'].includes(action)) {
       return NextResponse.json({ error: 'Invalid booking action.' }, { status: 400 })
     }
 
@@ -114,7 +114,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, status: 'scheduled' })
     }
 
-    const rpc = action === 'confirm' ? 'confirm_booking_request' : 'reject_booking_request'
+    const rpc = action === 'confirm'
+      ? 'confirm_booking_request'
+      : action === 'reject'
+        ? 'reject_booking_request'
+        : 'cancel_booking_request'
+
     const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${rpc}`, {
       method: 'POST',
       headers: {
@@ -136,6 +141,9 @@ export async function POST(request: Request) {
       if (message.includes('REQUEST_NOT_PENDING')) {
         return NextResponse.json({ error: 'This request was already processed.' }, { status: 409 })
       }
+      if (message.includes('REQUEST_NOT_CONFIRMED')) {
+        return NextResponse.json({ error: 'Only a confirmed booking can be cancelled.' }, { status: 409 })
+      }
       if (message.includes('REQUEST_NOT_FOUND')) {
         return NextResponse.json({ error: 'Booking request not found.' }, { status: 404 })
       }
@@ -144,7 +152,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unable to update booking request.' }, { status: 502 })
     }
 
-    return NextResponse.json({ ok: true, status: action === 'confirm' ? 'confirmed' : 'rejected' })
+    const status = action === 'confirm' ? 'confirmed' : action === 'reject' ? 'rejected' : 'cancelled'
+    return NextResponse.json({ ok: true, status })
   } catch (error) {
     console.error('Booking admin request action API error:', error)
     return NextResponse.json({ error: 'Unable to update booking request.' }, { status: 500 })
