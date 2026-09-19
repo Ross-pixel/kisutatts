@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const BOOKING_ADMIN_URL = 'https://kisutatts.vercel.app/admin/booking'
 
 type TelegramUpdate = {
   message?: {
@@ -89,17 +90,41 @@ async function handleStart(update: TelegramUpdate) {
   const message = update.message
   if (!message?.text?.startsWith('/start')) return false
 
-  await telegramApi('sendMessage', {
-    chat_id: message.chat.id,
-    text: [
-      'kisu.tatts booking bot is connected ♡',
-      '',
-      `Chat ID: ${message.chat.id}`,
-      `User ID: ${message.from?.id ?? 'unknown'}`,
-      '',
-      'Add these IDs to the Vercel environment variables before enabling booking actions.',
-    ].join('\n'),
-  })
+  const configuredAdminUserId = getTelegramAdminUserId()
+  const isAdmin = configuredAdminUserId && sameId(message.from?.id, configuredAdminUserId)
+
+  if (isAdmin) {
+    try {
+      await telegramApi('setChatMenuButton', {
+        chat_id: message.chat.id,
+        menu_button: {
+          type: 'web_app',
+          text: 'Booking admin',
+          web_app: { url: BOOKING_ADMIN_URL },
+        },
+      })
+    } catch (error) {
+      console.error('Telegram setChatMenuButton error:', error)
+    }
+
+    await telegramApi('sendMessage', {
+      chat_id: message.chat.id,
+      text: 'kisu.tatts booking bot ♡\n\nManage slots and requests from the private admin panel.',
+      reply_markup: {
+        inline_keyboard: [[
+          {
+            text: '♡ Booking admin',
+            web_app: { url: BOOKING_ADMIN_URL },
+          },
+        ]],
+      },
+    })
+  } else {
+    await telegramApi('sendMessage', {
+      chat_id: message.chat.id,
+      text: 'kisu.tatts booking bot is connected ♡',
+    })
+  }
 
   return true
 }
