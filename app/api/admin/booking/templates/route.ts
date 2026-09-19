@@ -40,6 +40,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid date.' }, { status: 400 })
     }
 
+    if (action === 'clear') {
+      const { response, raw } = await runRpc('clear_booking_day', {
+        p_date: date,
+      })
+
+      if (!response.ok) {
+        console.error('Clear booking day error:', response.status, raw)
+        return NextResponse.json({ error: 'Unable to clear this day.' }, { status: 502 })
+      }
+
+      return NextResponse.json({ ok: true, removed: JSON.parse(raw) })
+    }
+
     if (action === 'save') {
       const name = clean(body?.name)
       if (!name || name.length > 100) {
