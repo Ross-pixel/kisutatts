@@ -1,0 +1,12 @@
+import Script from 'next/script'
+import { BookingAdmin } from '@/components/booking-admin'
+import '@/app/admin-booking.css'
+
+export default function BookingAdminPage() {
+  return (
+    <main className="admin-page">
+      <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
+      <BookingAdmin />
+    </main>
+  )
+}
