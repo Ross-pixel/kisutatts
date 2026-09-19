@@ -1,5 +1,6 @@
 'use client'
 
+import Script from 'next/script'
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '@/components/language-provider'
 import {
@@ -34,6 +35,14 @@ type SubmitState =
   | { type: 'success'; requestId: string; slotLabel: string; referenceWarning?: boolean }
   | { type: 'error'; message: string }
 
+declare global {
+  interface Window {
+    turnstile?: {
+      reset?: () => void
+    }
+  }
+}
+
 const HELSINKI = 'Europe/Helsinki'
 
 const copy = {
@@ -54,6 +63,9 @@ const copy = {
     fileType: 'Reference photos must be JPEG, PNG, WebP, HEIC or HEIF.',
     fileSize: 'Each reference photo must be 10 MB or smaller.',
     fileCount: 'You can attach up to 5 reference photos.',
+    privacyBefore: 'I have read the',
+    privacyLink: 'booking privacy notice',
+    privacyAfter: 'and agree to the use of my booking details to handle this request.',
     send: 'Send booking request',
     sending: 'Sending…',
     uploading: 'Uploading references',
@@ -80,6 +92,9 @@ const copy = {
     fileType: 'Referenssikuvien pitää olla JPEG-, PNG-, WebP-, HEIC- tai HEIF-muodossa.',
     fileSize: 'Yksi referenssikuva saa olla enintään 10 Mt.',
     fileCount: 'Voit liittää enintään 5 referenssikuvaa.',
+    privacyBefore: 'Olen lukenut',
+    privacyLink: 'varauksen tietosuojailmoituksen',
+    privacyAfter: 'ja hyväksyn varaustietojeni käytön tämän pyynnön käsittelyyn.',
     send: 'Lähetä varauspyyntö',
     sending: 'Lähetetään…',
     uploading: 'Ladataan referenssejä',
@@ -210,6 +225,7 @@ export function BookingForm() {
   const { language } = useLanguage()
   const t = copy[language]
   const today = todayHelsinki()
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || ''
   const [slots, setSlots] = useState<BookingSlot[]>([])
   const [slotsLoading, setSlotsLoading] = useState(true)
   const [slotsError, setSlotsError] = useState(false)
@@ -428,6 +444,8 @@ export function BookingForm() {
           contact: form.get('contact'),
           idea: form.get('idea'),
           budget: form.get('budget'),
+          privacyAccepted: form.get('privacyAccepted') === 'on',
+          turnstileToken: form.get('cf-turnstile-response'),
         }),
       })
 
@@ -458,6 +476,7 @@ export function BookingForm() {
         return
       }
 
+      if (turnstileSiteKey) window.turnstile?.reset?.()
       setSubmitState({
         type: 'error',
         message: error instanceof Error ? error.message : 'Unable to send booking request.',
@@ -625,6 +644,18 @@ export function BookingForm() {
 
         {referenceError ? <p className="booking-error" role="alert">{referenceError}</p> : null}
       </div>
+
+      {turnstileSiteKey ? (
+        <div className="booking-turnstile">
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" />
+          <div className="cf-turnstile" data-sitekey={turnstileSiteKey} data-theme="light" data-action="booking" />
+        </div>
+      ) : null}
+
+      <label className="booking-consent">
+        <input name="privacyAccepted" type="checkbox" required disabled={submitting} />
+        <span>{t.privacyBefore} <a href="/privacy" target="_blank" rel="noreferrer">{t.privacyLink}</a> {t.privacyAfter}</span>
+      </label>
 
       {submitState.type === 'error' ? <p className="booking-error" role="alert">{submitState.message}</p> : null}
 
