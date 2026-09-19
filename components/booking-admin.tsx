@@ -13,6 +13,14 @@ type BookingSlot = {
   note: string | null
 }
 
+type BookingAttachment = {
+  id: string
+  originalFilename: string
+  mimeType: string
+  fileSize: number | null
+  signedUrl: string
+}
+
 type BookingRequest = {
   id: string
   slot_id: string
@@ -22,7 +30,7 @@ type BookingRequest = {
   budget: string | null
   status: RequestStatus
   created_at: string
-  attachmentCount: number
+  attachments: BookingAttachment[]
 }
 
 type AdminPayload = {
@@ -58,6 +66,12 @@ function formatSlot(slot: BookingSlot) {
     minute: '2-digit',
   })
   return `${date} · ${time.format(new Date(slot.starts_at))}–${time.format(new Date(slot.ends_at))}`
+}
+
+function formatFileSize(bytes: number | null) {
+  if (!bytes) return ''
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 
 function todayHelsinki() {
@@ -205,6 +219,31 @@ export function BookingAdmin() {
     }
   }
 
+  async function runRequestAction(bookingRequest: BookingRequest, action: 'confirm' | 'reject') {
+    if (!initData) return
+    if (action === 'reject' && !window.confirm(`Decline ${bookingRequest.name}'s request and release the slot?`)) return
+
+    setBusy(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/booking/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': initData,
+        },
+        body: JSON.stringify({ requestId: bookingRequest.id, action }),
+      })
+      const body = await response.json()
+      if (!response.ok) throw new Error(body?.error || 'Unable to update booking request.')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to update booking request.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!initData && !loading) {
     return (
       <div className="admin-gate">
@@ -268,17 +307,43 @@ export function BookingAdmin() {
       <section className="admin-section">
         <div className="admin-section-head"><div><div className="section-label">Clients</div><h2>Requests</h2></div><b>{activeRequests.length}</b></div>
         <div className="admin-request-list">
-          {activeRequests.length === 0 ? <p className="admin-empty">No active requests.</p> : activeRequests.map((request) => {
-            const slot = slotsById.get(request.slot_id)
+          {activeRequests.length === 0 ? <p className="admin-empty">No active requests.</p> : activeRequests.map((bookingRequest) => {
+            const slot = slotsById.get(bookingRequest.slot_id)
             return (
-              <article className="admin-request" key={request.id}>
+              <article className="admin-request" key={bookingRequest.id}>
                 <div className="admin-request-top">
-                  <div><strong>{request.name}</strong><span>{request.contact}</span></div>
-                  <span className={`admin-status admin-status-${request.status}`}>{request.status}</span>
+                  <div><strong>{bookingRequest.name}</strong><span>{bookingRequest.contact}</span></div>
+                  <span className={`admin-status admin-status-${bookingRequest.status}`}>{bookingRequest.status}</span>
                 </div>
                 <div className="admin-request-date">{slot ? formatSlot(slot) : 'Slot unavailable'}</div>
-                <p>{request.idea}</p>
-                <footer><span>Budget: <b>{request.budget || '—'}</b></span><span>References: <b>{request.attachmentCount}</b></span></footer>
+                <p>{bookingRequest.idea}</p>
+                <footer><span>Budget: <b>{bookingRequest.budget || '—'}</b></span><span>References: <b>{bookingRequest.attachments.length}</b></span></footer>
+
+                {bookingRequest.attachments.length > 0 ? (
+                  <div className="admin-reference-grid">
+                    {bookingRequest.attachments.map((attachment) => {
+                      const previewable = ['image/jpeg', 'image/png', 'image/webp'].includes(attachment.mimeType)
+                      return previewable ? (
+                        <a className="admin-reference admin-reference-image" href={attachment.signedUrl} target="_blank" rel="noreferrer" key={attachment.id}>
+                          <img src={attachment.signedUrl} alt={attachment.originalFilename} />
+                          <span>{attachment.originalFilename}</span>
+                        </a>
+                      ) : (
+                        <a className="admin-reference admin-reference-file" href={attachment.signedUrl} target="_blank" rel="noreferrer" key={attachment.id}>
+                          <b>▧ {attachment.originalFilename}</b>
+                          <small>{attachment.mimeType.replace('image/', '').toUpperCase()} {formatFileSize(attachment.fileSize)}</small>
+                        </a>
+                      )
+                    })}
+                  </div>
+                ) : null}
+
+                {bookingRequest.status === 'pending' ? (
+                  <div className="admin-request-actions">
+                    <button className="admin-confirm" type="button" disabled={busy} onClick={() => void runRequestAction(bookingRequest, 'confirm')}>✓ Confirm</button>
+                    <button className="admin-decline" type="button" disabled={busy} onClick={() => void runRequestAction(bookingRequest, 'reject')}>✕ Decline</button>
+                  </div>
+                ) : null}
               </article>
             )
           })}
