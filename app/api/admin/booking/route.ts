@@ -1,9 +1,20 @@
 import { NextResponse } from 'next/server'
 import { getTelegramAdminFromRequest } from '@/lib/telegram-admin'
 import { getSupabaseServerConfig } from '@/lib/supabase/config'
+import { BOOKING_REFERENCE_BUCKET } from '@/lib/booking-references'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+type BookingAttachmentRow = {
+  id: string
+  request_id: string
+  storage_path: string
+  original_filename: string | null
+  mime_type: string | null
+  file_size: number | null
+  uploaded_at: string | null
+}
 
 async function loadJson(url: string, secretKey: string) {
   const response = await fetch(url, {
@@ -15,6 +26,46 @@ async function loadJson(url: string, secretKey: string) {
     throw new Error(`Supabase ${response.status}: ${raw}`)
   }
   return JSON.parse(raw)
+}
+
+function encodeStoragePath(path: string) {
+  return path.split('/').map(encodeURIComponent).join('/')
+}
+
+async function signAttachment(
+  supabaseUrl: string,
+  secretKey: string,
+  attachment: BookingAttachmentRow,
+) {
+  const response = await fetch(
+    `${supabaseUrl}/storage/v1/object/sign/${BOOKING_REFERENCE_BUCKET}/${encodeStoragePath(attachment.storage_path)}`,
+    {
+      method: 'POST',
+      headers: {
+        apikey: secretKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ expiresIn: 600 }),
+      cache: 'no-store',
+    },
+  )
+
+  if (!response.ok) {
+    console.error('Unable to sign admin booking reference:', response.status, await response.text())
+    return null
+  }
+
+  const signed = await response.json() as { signedURL?: string; signedUrl?: string }
+  const path = signed.signedURL || signed.signedUrl
+  if (!path) return null
+
+  return {
+    id: attachment.id,
+    originalFilename: attachment.original_filename || 'reference',
+    mimeType: attachment.mime_type || 'application/octet-stream',
+    fileSize: attachment.file_size,
+    signedUrl: path.startsWith('http') ? path : `${supabaseUrl}/storage/v1${path}`,
+  }
 }
 
 export async function GET(request: Request) {
@@ -35,17 +86,32 @@ export async function GET(request: Request) {
         secretKey,
       ),
       loadJson(
-        `${supabaseUrl}/rest/v1/booking_attachments?select=id,request_id,original_filename,mime_type,file_size,uploaded_at&uploaded_at=not.is.null&order=created_at.asc`,
+        `${supabaseUrl}/rest/v1/booking_attachments?select=id,request_id,storage_path,original_filename,mime_type,file_size,uploaded_at&uploaded_at=not.is.null&order=created_at.asc`,
         secretKey,
       ),
     ])
 
-    const attachmentCounts = new Map<string, number>()
-    for (const attachment of attachments as Array<{ request_id: string }>) {
-      attachmentCounts.set(
-        attachment.request_id,
-        (attachmentCounts.get(attachment.request_id) || 0) + 1,
-      )
+    const activeRequestIds = new Set(
+      (requests as Array<{ id: string; status: string }>)
+        .filter((item) => item.status === 'pending' || item.status === 'confirmed')
+        .map((item) => item.id),
+    )
+
+    const attachmentEntries = await Promise.all(
+      (attachments as BookingAttachmentRow[])
+        .filter((attachment) => activeRequestIds.has(attachment.request_id))
+        .map(async (attachment) => [
+          attachment.request_id,
+          await signAttachment(supabaseUrl, secretKey, attachment),
+        ] as const),
+    )
+
+    const attachmentsByRequest = new Map<string, Array<Record<string, unknown>>>()
+    for (const [requestId, attachment] of attachmentEntries) {
+      if (!attachment) continue
+      const current = attachmentsByRequest.get(requestId) || []
+      current.push(attachment)
+      attachmentsByRequest.set(requestId, current)
     }
 
     return NextResponse.json({
@@ -57,7 +123,7 @@ export async function GET(request: Request) {
       slots,
       requests: (requests as Array<Record<string, unknown> & { id: string }>).map((item) => ({
         ...item,
-        attachmentCount: attachmentCounts.get(item.id) || 0,
+        attachments: attachmentsByRequest.get(item.id) || [],
       })),
     })
   } catch (error) {
