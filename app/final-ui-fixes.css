@@ -1,0 +1,18 @@
+/* Small alignment fixes only; keep the established kisu.tatts visual language unchanged. */
+.contact-section .primary-button{margin-top:0!important}
+.contact-section .contact-actions{align-items:flex-start}
+
+@media(max-width:480px){
+  .admin-request-actions{grid-template-columns:1fr!important}
+  .admin-request-actions .admin-confirm,
+  .admin-request-actions .admin-adjust,
+  .admin-request-actions .admin-decline,
+  .admin-request-actions .admin-cancel-booking{
+    grid-column:1/-1!important;
+    display:flex;
+    width:100%;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+  }
+}
