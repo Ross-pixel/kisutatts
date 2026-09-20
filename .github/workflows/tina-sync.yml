@@ -3,6 +3,11 @@ name: Sync Tina schema lock
 on:
   push:
     branches: [main]
+    paths:
+      - 'tina/config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/tina-sync.yml'
   workflow_dispatch:
 
 permissions:
@@ -32,9 +37,6 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Tina schema lock
-        env:
-          NEXT_PUBLIC_TINA_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_TINA_CLIENT_ID }}
-          TINA_TOKEN: ${{ secrets.TINA_TOKEN }}
         run: |
           set +e
           timeout 30s pnpm exec tinacms dev --noWatch > /tmp/tina-dev.log 2>&1
