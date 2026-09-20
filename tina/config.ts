@@ -10,7 +10,7 @@ export default defineConfig({
   media: { tina: { mediaRoot: 'uploads', publicFolder: 'public' } },
   schema: { collections: [
     { name:'homepage', label:'Тексты сайта', path:'content/site', format:'mdx', fields:[
-      {type:'string',name:'heroTitle',label:'Hero · имя',required:true},
+      {type:'string',name:'heroTitle',label:'Hero · имя',isTitle:true,required:true},
       {type:'string',name:'heroKickerEn',label:'Hero · строка сверху (EN)'},
       {type:'string',name:'heroKickerFi',label:'Hero · строка сверху (FI)'},
       {type:'string',name:'heroLeadEn',label:'Hero · подзаголовок (EN)'},
