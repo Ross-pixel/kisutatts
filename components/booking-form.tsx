@@ -66,11 +66,15 @@ const copy = {
     privacyBefore: 'I have read the',
     privacyLink: 'booking privacy notice',
     privacyAfter: 'and agree to the use of my booking details to handle this request.',
+    important: 'Important',
+    confirmationNotice: 'Sending this request does not guarantee an appointment. Your booking is confirmed only after Eva reviews the request and contacts you with confirmation.',
     send: 'Send booking request',
     sending: 'Sending…',
     uploading: 'Uploading references',
     successTitle: 'Request sent ♡',
-    successText: 'Eva will review the idea before confirming the appointment. This slot is now held for your request.',
+    successText: 'Your request has been received, but your appointment is not confirmed yet. Eva will review it and contact you if the booking is accepted.',
+    statusLabel: 'Status',
+    statusPending: 'Awaiting confirmation',
     successReferences: 'Your reference photos were attached securely.',
     referenceWarning: 'Your booking request was saved, but one or more reference photos could not be attached. Please send those images to Eva separately on Instagram.',
     pickSlot: 'Please choose a time first.',
@@ -95,11 +99,15 @@ const copy = {
     privacyBefore: 'Olen lukenut',
     privacyLink: 'varauksen tietosuojailmoituksen',
     privacyAfter: 'ja hyväksyn varaustietojeni käytön tämän pyynnön käsittelyyn.',
+    important: 'Tärkeää',
+    confirmationNotice: 'Tämän pyynnön lähettäminen ei vielä vahvista ajanvarausta. Aika on vahvistettu vasta, kun Eva on käsitellyt pyynnön ja ottanut sinuun yhteyttä vahvistuksen kanssa.',
     send: 'Lähetä varauspyyntö',
     sending: 'Lähetetään…',
     uploading: 'Ladataan referenssejä',
     successTitle: 'Pyyntö lähetetty ♡',
-    successText: 'Eva tarkistaa idean ennen ajan vahvistamista. Tämä aika on nyt varattu pyynnöllesi.',
+    successText: 'Pyyntösi on vastaanotettu, mutta ajanvarausta ei ole vielä vahvistettu. Eva käsittelee pyynnön ja ottaa sinuun yhteyttä, jos varaus hyväksytään.',
+    statusLabel: 'Tila',
+    statusPending: 'Odottaa vahvistusta',
     successReferences: 'Referenssikuvasi liitettiin turvallisesti.',
     referenceWarning: 'Varauspyyntö tallennettiin, mutta yhtä tai useampaa referenssikuvaa ei voitu liittää. Lähetä puuttuvat kuvat Evalle erikseen Instagramissa.',
     pickSlot: 'Valitse ensin aika.',
@@ -490,6 +498,10 @@ export function BookingForm() {
         <span className="booking-success-heart" aria-hidden="true">♡</span>
         <h2>{t.successTitle}</h2>
         <p>{t.successText}</p>
+        <div className="booking-request-status">
+          <span>{t.statusLabel}</span>
+          <strong>{t.statusPending}</strong>
+        </div>
         {submitState.slotLabel ? <strong>{submitState.slotLabel}</strong> : null}
         {referenceFiles.length > 0 && !submitState.referenceWarning ? <p className="booking-success-references">{t.successReferences}</p> : null}
         {submitState.referenceWarning ? <p className="booking-reference-warning">{t.referenceWarning}</p> : null}
@@ -643,6 +655,11 @@ export function BookingForm() {
         ) : null}
 
         {referenceError ? <p className="booking-error" role="alert">{referenceError}</p> : null}
+      </div>
+
+      <div className="booking-confirmation-notice" role="note">
+        <b>♡ {t.important}</b>
+        <p>{t.confirmationNotice}</p>
       </div>
 
       {turnstileSiteKey ? (
