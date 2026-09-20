@@ -15,8 +15,8 @@ export default defineConfig({
       path: 'content/site',
       format: 'json',
       ui: {
-        global: true,
         router: () => '/',
+        allowedActions: { create: false, delete: false },
       },
       fields: [
         { type: 'string', name: 'heroTitle', label: 'Hero · имя', required: true },
