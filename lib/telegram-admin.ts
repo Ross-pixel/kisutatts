@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'crypto'
-import { getTelegramAdminUserId } from '@/lib/telegram'
+import { isTelegramAdminUserId } from '@/lib/telegram-access'
 
 type TelegramWebAppUser = {
   id: number
@@ -22,8 +22,7 @@ function botToken() {
 
 export function verifyTelegramAdminInitData(initData: string): TelegramAdminIdentity | null {
   const token = botToken()
-  const configuredAdminId = getTelegramAdminUserId()
-  if (!token || !configuredAdminId || !initData) return null
+  if (!token || !initData) return null
 
   const params = new URLSearchParams(initData)
   const suppliedHash = params.get('hash') || ''
@@ -62,7 +61,7 @@ export function verifyTelegramAdminInitData(initData: string): TelegramAdminIden
     return null
   }
 
-  if (!user || String(user.id) !== configuredAdminId) return null
+  if (!user || !isTelegramAdminUserId(user.id)) return null
 
   return { user, authDate }
 }
