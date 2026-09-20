@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getSupabaseServerConfig } from '@/lib/supabase/config'
 import {
-  getTelegramAdminUserId,
   getTelegramChatId,
   getTelegramWebhookSecret,
   telegramApi,
 } from '@/lib/telegram'
+import { isTelegramAdminUserId } from '@/lib/telegram-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -90,8 +90,7 @@ async function handleStart(update: TelegramUpdate) {
   const message = update.message
   if (!message?.text?.startsWith('/start')) return false
 
-  const configuredAdminUserId = getTelegramAdminUserId()
-  const isAdmin = configuredAdminUserId && sameId(message.from?.id, configuredAdminUserId)
+  const isAdmin = isTelegramAdminUserId(message.from?.id)
 
   if (isAdmin) {
     try {
@@ -159,14 +158,13 @@ export async function POST(request: Request) {
   }
 
   const configuredChatId = getTelegramChatId()
-  const configuredAdminUserId = getTelegramAdminUserId()
 
   if (!configuredChatId || !sameId(callback.message.chat.id, configuredChatId)) {
     await answerCallback(callback.id, 'This chat is not authorized.', true)
     return NextResponse.json({ ok: true })
   }
 
-  if (configuredAdminUserId && !sameId(callback.from.id, configuredAdminUserId)) {
+  if (!isTelegramAdminUserId(callback.from.id)) {
     await answerCallback(callback.id, 'You are not authorized to manage bookings.', true)
     return NextResponse.json({ ok: true })
   }
