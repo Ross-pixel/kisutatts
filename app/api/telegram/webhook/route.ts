@@ -106,9 +106,16 @@ async function handleStart(update: TelegramUpdate) {
       console.error('Telegram setChatMenuButton error:', error)
     }
 
+    const receivesBookingNotifications = sameId(message.chat.id, getTelegramChatId())
+
     await telegramApi('sendMessage', {
       chat_id: message.chat.id,
-      text: 'kisu.tatts booking bot ♡\n\nManage slots and requests from the private admin panel.',
+      text: [
+        'kisu.tatts booking bot ♡',
+        '',
+        'Manage slots and requests from the private admin panel.',
+        `Booking notifications: ${receivesBookingNotifications ? 'on' : 'off'}`,
+      ].join('\n'),
       reply_markup: {
         inline_keyboard: [[
           {
@@ -121,9 +128,26 @@ async function handleStart(update: TelegramUpdate) {
   } else {
     await telegramApi('sendMessage', {
       chat_id: message.chat.id,
-      text: 'kisu.tatts booking bot is connected ♡',
+      text: 'kisu.tatts booking bot is connected ♡\n\nUse /id to show the Telegram IDs needed for admin setup.',
     })
   }
+
+  return true
+}
+
+async function handleIdentity(update: TelegramUpdate) {
+  const message = update.message
+  if (!message?.text?.startsWith('/id')) return false
+
+  await telegramApi('sendMessage', {
+    chat_id: message.chat.id,
+    text: [
+      'Telegram setup IDs',
+      '',
+      `User ID: ${message.from?.id ?? 'unknown'}`,
+      `Chat ID: ${message.chat.id}`,
+    ].join('\n'),
+  })
 
   return true
 }
@@ -144,11 +168,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (await handleStart(update)) {
+    if (await handleStart(update) || await handleIdentity(update)) {
       return NextResponse.json({ ok: true })
     }
   } catch (error) {
-    console.error('Telegram /start handler error:', error)
+    console.error('Telegram command handler error:', error)
     return NextResponse.json({ ok: true })
   }
 
