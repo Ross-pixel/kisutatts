@@ -1,0 +1,18 @@
+/* On-skin cards: soft lavender frame, rounded clipping and a light shadow. */
+.healed-card{
+  border:1px solid #d8cce5!important;
+  border-radius:30px!important;
+  background:#f7f1fa!important;
+  box-shadow:4px 5px 0 rgba(216,204,229,.68),0 8px 20px rgba(126,108,155,.08);
+  overflow:hidden!important;
+}
+.healed-card>div,.healed-card .lightbox-trigger{
+  border-radius:inherit;
+  overflow:hidden;
+}
+.healed-card .portfolio-image,.healed-card .lightbox-trigger img{
+  border-radius:inherit;
+}
+@media(max-width:560px){
+  .healed-card{border-radius:26px!important;box-shadow:3px 4px 0 rgba(216,204,229,.64),0 6px 16px rgba(126,108,155,.07)}
+}
