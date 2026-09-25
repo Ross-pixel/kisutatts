@@ -4,6 +4,7 @@ import './globals.css'
 import './polish.css'
 import './booking-upload.css'
 import './final-ui-fixes.css'
+import './on-skin-polish.css'
 import { LanguageProvider } from '@/components/language-provider'
 
 export const metadata: Metadata = {
