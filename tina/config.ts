@@ -62,6 +62,17 @@ export default defineConfig({
           name:'items',
           label:'Карточки цен',
           list:true,
+          ui: {
+            itemProps: (item) => {
+              const min = item?.priceMin
+              const max = item?.priceMax
+              const hasMin = typeof min === 'number' && Number.isFinite(min)
+              const hasMax = typeof max === 'number' && Number.isFinite(max)
+              const price = hasMin ? `${min}${hasMax && max !== min ? `–${max}` : ''}€` : ''
+              const title = item?.titleEn || item?.titleFi || 'Новая карточка цены'
+              return { label: price ? `${price} · ${title}` : title }
+            },
+          },
           fields:[
             { type:'number', name:'priceMin', label:'Цена от, €', required:true },
             { type:'number', name:'priceMax', label:'Цена до, €', description:'Оставь пустым, если это не диапазон' },
