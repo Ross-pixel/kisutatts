@@ -35,26 +35,39 @@ const HOMEPAGE_QUERY = `
       onSkinTextFi
       priceIntroEn
       priceIntroFi
-      pricingItems {
-        price
-        titleEn
-        titleFi
-        descriptionEn
-        descriptionFi
-      }
       contactTextEn
       contactTextFi
     }
   }
 `
 
-const fallbackPricingItems = prices.map((price, index) => ({
-  price,
-  titleEn: flash[index]?.[0] || '',
-  titleFi: fiFlash[index]?.[0] || flash[index]?.[0] || '',
-  descriptionEn: flash[index]?.[1] || '',
-  descriptionFi: fiFlash[index]?.[1] || flash[index]?.[1] || '',
-}))
+const PRICING_QUERY = `
+  query PricingVisualEdit($relativePath: String!) {
+    pricing(relativePath: $relativePath) {
+      title
+      items {
+        priceMin
+        priceMax
+        titleEn
+        titleFi
+        descriptionEn
+        descriptionFi
+      }
+    }
+  }
+`
+
+const fallbackPricingItems = prices.map((price, index) => {
+  const matches = price.match(/\d+/g) || []
+  return {
+    priceMin: Number(matches[0] || 0),
+    priceMax: matches[1] ? Number(matches[1]) : null,
+    titleEn: flash[index]?.[0] || '',
+    titleFi: fiFlash[index]?.[0] || flash[index]?.[0] || '',
+    descriptionEn: flash[index]?.[1] || '',
+    descriptionFi: fiFlash[index]?.[1] || flash[index]?.[1] || '',
+  }
+})
 
 function normalizeImageSrc(src: unknown) {
   if (typeof src !== 'string' || !src) return null
@@ -65,10 +78,11 @@ function categoryClass(category: unknown) {
   return typeof category === 'string' ? category.toLowerCase().replace(/[^a-z]/g, '') || 'custom' : 'custom'
 }
 
-function priceSortValue(value: unknown) {
-  if (typeof value !== 'string') return Number.POSITIVE_INFINITY
-  const match = value.replace(',', '.').match(/\d+(?:\.\d+)?/)
-  return match ? Number(match[0]) : Number.POSITIVE_INFINITY
+function formatPrice(item: any) {
+  const min = Number(item?.priceMin)
+  const max = Number(item?.priceMax)
+  if (!Number.isFinite(min)) return ''
+  return Number.isFinite(max) && max > min ? `${min}–${max}€` : `${min}€`
 }
 
 const FallbackCard = ({ item }: { item: any }) => (
@@ -131,13 +145,18 @@ export default function Page() {
         onSkinTextFi: copy.fi.onSkinText,
         priceIntroEn: copy.en.priceIntro,
         priceIntroFi: copy.fi.priceIntro,
-        pricingItems: fallbackPricingItems,
         contactTextEn: copy.en.contactText,
         contactTextFi: copy.fi.contactText,
       },
     },
   )
+  const pricingCms = useTinaContent<any>(
+    PRICING_QUERY,
+    { relativePath: 'prices.mdx' },
+    { pricing: { title: 'Flash pricing', items: fallbackPricingItems } },
+  )
   const site = homepageCms.homepage || {}
+  const pricing = pricingCms.pricing || {}
   const localized = (enField: string, fiField: string, fallback: string) => (
     language === 'fi' ? site[fiField] || fallback : site[enField] || fallback
   )
@@ -149,9 +168,9 @@ export default function Page() {
   const homepagePortfolioNodes = featuredNodes.length ? featuredNodes : cmsNodes
   const onSkinWorks = onSkinCms.onSkinWorksConnection?.edges?.map((edge: any) => edge.node).filter(Boolean) ?? []
   const previewWorks = onSkinWorks.length ? onSkinWorks.slice(0, 3) : [1, 2, 3].map((i) => ({ title: String(i), image: null }))
-  const hasCmsPricing = Array.isArray(site.pricingItems) && site.pricingItems.length > 0
-  const pricingItems = [...(hasCmsPricing ? site.pricingItems : fallbackPricingItems)]
-    .sort((a: any, b: any) => priceSortValue(a?.price) - priceSortValue(b?.price))
+  const hasCmsPricing = Array.isArray(pricing.items) && pricing.items.length > 0
+  const pricingItems = [...(hasCmsPricing ? pricing.items : fallbackPricingItems)]
+    .sort((a: any, b: any) => Number(a?.priceMin ?? Infinity) - Number(b?.priceMin ?? Infinity))
 
   const heroKickerField = language === 'fi' ? 'heroKickerFi' : 'heroKickerEn'
   const heroLeadField = language === 'fi' ? 'heroLeadFi' : 'heroLeadEn'
@@ -183,7 +202,7 @@ export default function Page() {
     <section className="section max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pricing-section"><Deco className="deco-flash">✦</Deco><Constellation area="flash-extra" /><div className="section-label">✦ 04 / {c.pricing}</div><p className="page-intro" data-tina-field={tinaField(site, priceIntroField)}>{priceIntro}</p><div className="flash-list">{pricingItems.slice(0, 3).map((row: any, index: number) => {
       const title = language === 'fi' ? row.titleFi || row.titleEn : row.titleEn || row.titleFi
       const description = language === 'fi' ? row.descriptionFi || row.descriptionEn : row.descriptionEn || row.descriptionFi
-      return <div className="flash-row" key={`${row.price}-${title}-${index}`} data-tina-field={hasCmsPricing ? tinaField(row) : undefined}><strong data-tina-field={hasCmsPricing ? tinaField(row, 'price') : undefined}>{row.price}</strong><span><b data-tina-field={hasCmsPricing ? tinaField(row, pricingTitleField) : undefined}>{title}</b><small data-tina-field={hasCmsPricing ? tinaField(row, pricingDescriptionField) : undefined}>{description}</small></span><i>+</i></div>
+      return <div className="flash-row" key={`${row.priceMin}-${title}-${index}`} data-tina-field={hasCmsPricing ? tinaField(row) : undefined}><strong data-tina-field={hasCmsPricing ? tinaField(row, 'priceMin') : undefined}>{formatPrice(row)}</strong><span><b data-tina-field={hasCmsPricing ? tinaField(row, pricingTitleField) : undefined}>{title}</b><small data-tina-field={hasCmsPricing ? tinaField(row, pricingDescriptionField) : undefined}>{description}</small></span><i>+</i></div>
     })}</div><a className="text-link" href="/flash">{language === 'fi' ? 'Katso kaikki flash-модели' : 'View all flash designs'} <ArrowUpRight size={16} /></a></section>
     <section className="section max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 contact-section"><Deco className="deco-contact">♡</Deco><Constellation area="contact-extra" /><div className="section-label">♡ 05 / {c.contact}</div><h2 data-tina-field={tinaField(site, contactTextField)}>{contactText}</h2><div className="contact-actions"><a className="primary-button" href="/booking">{c.book} <ArrowUpRight size={16} /></a><a className="instagram-link" href={instagram} target="_blank" rel="noreferrer"><span aria-hidden="true">♡</span> Instagram · @kisu.tatts</a></div></section>
   </main>
