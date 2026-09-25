@@ -12,13 +12,22 @@ import { FlashDesignsConnectionDocument } from '@/tina/__generated__/types'
 
 const designs = ['stars', 'ghost', 'mushroom', 'cat', 'jellyfish', 'witch', 'bug', 'skeleton', 'heart', 'sword']
 
-const PRICING_QUERY = `
-  query FlashPricing($relativePath: String!) {
+const HOMEPAGE_PRICING_INTRO_QUERY = `
+  query HomepagePricingIntro($relativePath: String!) {
     homepage(relativePath: $relativePath) {
       priceIntroEn
       priceIntroFi
-      pricingItems {
-        price
+    }
+  }
+`
+
+const PRICING_QUERY = `
+  query FlashPricing($relativePath: String!) {
+    pricing(relativePath: $relativePath) {
+      title
+      items {
+        priceMin
+        priceMax
         titleEn
         titleFi
         descriptionEn
@@ -28,38 +37,49 @@ const PRICING_QUERY = `
   }
 `
 
-const fallbackPricingItems = prices.map((price, index) => ({
-  price,
-  titleEn: flash[index]?.[0] || '',
-  titleFi: fiFlash[index]?.[0] || flash[index]?.[0] || '',
-  descriptionEn: flash[index]?.[1] || '',
-  descriptionFi: fiFlash[index]?.[1] || flash[index]?.[1] || '',
-}))
+const fallbackPricingItems = prices.map((price, index) => {
+  const matches = price.match(/\d+/g) || []
+  return {
+    priceMin: Number(matches[0] || 0),
+    priceMax: matches[1] ? Number(matches[1]) : null,
+    titleEn: flash[index]?.[0] || '',
+    titleFi: fiFlash[index]?.[0] || flash[index]?.[0] || '',
+    descriptionEn: flash[index]?.[1] || '',
+    descriptionFi: fiFlash[index]?.[1] || flash[index]?.[1] || '',
+  }
+})
 
 function normalizeImageSrc(src: unknown) {
   if (typeof src !== 'string' || !src) return null
   return src.startsWith('/') || src.startsWith('http://') || src.startsWith('https://') ? src : `/${src}`
 }
 
-function priceSortValue(value: unknown) {
-  if (typeof value !== 'string') return Number.POSITIVE_INFINITY
-  const match = value.replace(',', '.').match(/\d+(?:\.\d+)?/)
-  return match ? Number(match[0]) : Number.POSITIVE_INFINITY
+function formatPrice(item: any) {
+  const min = Number(item?.priceMin)
+  const max = Number(item?.priceMax)
+  if (!Number.isFinite(min)) return ''
+  return Number.isFinite(max) && max > min ? `${min}–${max}€` : `${min}€`
 }
 
 export default function FlashPage() {
   const { language } = useLanguage()
   const t = translations[language]
   const cms = useTinaContent<any>(FlashDesignsConnectionDocument, { first: 100 }, { flashDesignsConnection: { edges: [] } })
+  const introCms = useTinaContent<any>(
+    HOMEPAGE_PRICING_INTRO_QUERY,
+    { relativePath: 'home.mdx' },
+    { homepage: { priceIntroEn: t.pricing.intro, priceIntroFi: t.pricing.intro } },
+  )
   const pricingCms = useTinaContent<any>(
     PRICING_QUERY,
-    { relativePath: 'home.mdx' },
-    { homepage: { priceIntroEn: t.pricing.intro, priceIntroFi: t.pricing.intro, pricingItems: fallbackPricingItems } },
+    { relativePath: 'prices.mdx' },
+    { pricing: { title: 'Flash pricing', items: fallbackPricingItems } },
   )
-  const homepage = pricingCms.homepage || {}
-  const hasCmsPricing = Array.isArray(homepage.pricingItems) && homepage.pricingItems.length > 0
-  const pricingItems = [...(hasCmsPricing ? homepage.pricingItems : fallbackPricingItems)]
-    .sort((a: any, b: any) => priceSortValue(a?.price) - priceSortValue(b?.price))
+  const homepage = introCms.homepage || {}
+  const pricing = pricingCms.pricing || {}
+  const hasCmsPricing = Array.isArray(pricing.items) && pricing.items.length > 0
+  const pricingItems = [...(hasCmsPricing ? pricing.items : fallbackPricingItems)]
+    .sort((a: any, b: any) => Number(a?.priceMin ?? Infinity) - Number(b?.priceMin ?? Infinity))
   const priceIntroField = language === 'fi' ? 'priceIntroFi' : 'priceIntroEn'
   const priceIntro = language === 'fi'
     ? homepage.priceIntroFi || t.pricing.intro
@@ -77,8 +97,8 @@ export default function FlashPage() {
     <div className="flash-list full-flash-list">{pricingItems.map((row: any, index: number) => {
       const title = language === 'fi' ? row.titleFi || row.titleEn : row.titleEn || row.titleFi
       const description = language === 'fi' ? row.descriptionFi || row.descriptionEn : row.descriptionEn || row.descriptionFi
-      return <div className="flash-row" key={`${row.price}-${title}-${index}`} data-tina-field={hasCmsPricing ? tinaField(row) : undefined}>
-        <strong data-tina-field={hasCmsPricing ? tinaField(row, 'price') : undefined}>{row.price}</strong>
+      return <div className="flash-row" key={`${row.priceMin}-${title}-${index}`} data-tina-field={hasCmsPricing ? tinaField(row) : undefined}>
+        <strong data-tina-field={hasCmsPricing ? tinaField(row, 'priceMin') : undefined}>{formatPrice(row)}</strong>
         <span>
           <b data-tina-field={hasCmsPricing ? tinaField(row, titleField) : undefined}>{title}</b>
           <small data-tina-field={hasCmsPricing ? tinaField(row, descriptionField) : undefined}>{description}</small>
