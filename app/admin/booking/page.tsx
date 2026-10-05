@@ -5,6 +5,7 @@ import { BookingAdminBehaviorFixes } from '@/components/booking-admin-behavior-f
 import { BookingAdminPrivateTools } from '@/components/booking-admin-private-tools'
 import '@/app/admin-booking.css'
 import '@/app/admin-booking-extra.css'
+import '@/app/admin-booking-mobile-fixes.css'
 import '@/app/admin-gift-cards.css'
 
 export default function BookingAdminPage() {
