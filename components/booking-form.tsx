@@ -56,6 +56,8 @@ const copy = {
     contact: 'Instagram / Telegram / other contact',
     idea: 'Idea or existing sketch number',
     budget: 'Budget (optional)',
+    giftCard: 'Gift card code (optional)',
+    giftCardHint: 'If you have a kisu.tatts gift card, enter its code here. Nothing is charged from the card when you send the request.',
     references: 'Reference photos',
     referencesNote: 'Up to 5 images · JPEG, PNG, WebP, HEIC or HEIF · max 10 MB each. Photos are stored privately.',
     chooseReferences: 'Choose photos',
@@ -89,6 +91,8 @@ const copy = {
     contact: 'Instagram / Telegram / muu yhteystieto',
     idea: 'Idea tai valmiin luonnoksen numero',
     budget: 'Budjetti (valinnainen)',
+    giftCard: 'Lahjakortin koodi (valinnainen)',
+    giftCardHint: 'Jos sinulla on kisu.tatts-lahjakortti, syötä sen koodi tähän. Lahjakortilta ei veloiteta mitään varauspyynnön lähettämisen yhteydessä.',
     references: 'Referenssikuvat',
     referencesNote: 'Enintään 5 kuvaa · JPEG, PNG, WebP, HEIC tai HEIF · enintään 10 Mt / kuva. Kuvat tallennetaan yksityisesti.',
     chooseReferences: 'Valitse kuvat',
@@ -452,6 +456,7 @@ export function BookingForm() {
           contact: form.get('contact'),
           idea: form.get('idea'),
           budget: form.get('budget'),
+          giftCardCode: form.get('giftCardCode'),
           privacyAccepted: form.get('privacyAccepted') === 'on',
           turnstileToken: form.get('cf-turnstile-response'),
         }),
@@ -615,6 +620,12 @@ export function BookingForm() {
       <label className="booking-field booking-budget">
         <span>{t.budget}</span>
         <input name="budget" type="text" maxLength={200} placeholder="150–200 €" disabled={submitting} />
+      </label>
+
+      <label className="booking-field booking-gift-card">
+        <span>{t.giftCard}</span>
+        <input name="giftCardCode" type="text" maxLength={24} placeholder="KISU-XXXXXX-XXXXXX" autoCapitalize="characters" autoCorrect="off" spellCheck={false} disabled={submitting} />
+        <small>{t.giftCardHint}</small>
       </label>
 
       <div className="booking-reference-upload">
