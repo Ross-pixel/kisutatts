@@ -11,6 +11,7 @@ type TelegramReplyMarkup = {
 type BookingRequestRow = {
   id: string
   slot_id: string
+  gift_card_id: string | null
   name: string
   contact: string
   idea: string
@@ -21,6 +22,14 @@ type BookingSlotRow = {
   id: string
   starts_at: string
   ends_at: string
+}
+
+type GiftCardNoticeRow = {
+  id: string
+  code: string
+  balance_cents: number
+  status: string
+  recipient_name: string
 }
 
 type BookingAttachmentRow = {
@@ -126,6 +135,15 @@ function formatHelsinkiSlot(slot: BookingSlotRow) {
   return `${date} · ${time.format(start)}–${time.format(end)}`
 }
 
+function formatEuro(cents: number) {
+  return new Intl.NumberFormat('en-FI', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100)
+}
+
 function trimTelegramText(value: string, max = 2200) {
   const text = value.trim()
   return text.length <= max ? text : `${text.slice(0, max - 1)}…`
@@ -140,7 +158,7 @@ async function loadBookingRequest(requestId: string) {
 
   const requestParams = new URLSearchParams({
     id: `eq.${requestId}`,
-    select: 'id,slot_id,name,contact,idea,budget',
+    select: 'id,slot_id,gift_card_id,name,contact,idea,budget',
     limit: '1',
   })
 
@@ -182,7 +200,29 @@ async function loadBookingRequest(requestId: string) {
   const slot = slots[0]
   if (!slot) throw new Error('Booking slot not found')
 
-  return { booking, slot }
+  let giftCard: GiftCardNoticeRow | null = null
+  if (booking.gift_card_id) {
+    const giftCardParams = new URLSearchParams({
+      id: `eq.${booking.gift_card_id}`,
+      select: 'id,code,balance_cents,status,recipient_name',
+      limit: '1',
+    })
+    const giftCardResponse = await fetch(
+      `${supabaseUrl}/rest/v1/gift_cards?${giftCardParams.toString()}`,
+      {
+        headers: { apikey: secretKey },
+        cache: 'no-store',
+      },
+    )
+    if (giftCardResponse.ok) {
+      const rows = await giftCardResponse.json() as GiftCardNoticeRow[]
+      giftCard = rows[0] || null
+    } else {
+      console.error('Unable to load linked gift card:', giftCardResponse.status, await giftCardResponse.text())
+    }
+  }
+
+  return { booking, slot, giftCard }
 }
 
 async function claimReferenceNotification(requestId: string) {
@@ -373,21 +413,29 @@ export async function sendBookingTelegramNotification(requestId: string) {
   const chatId = getTelegramChatId()
   if (!telegramToken() || !chatId) return { skipped: true as const }
 
-  const { booking, slot } = await loadBookingRequest(requestId)
+  const { booking, slot, giftCard } = await loadBookingRequest(requestId)
   const budget = booking.budget?.trim() || 'Not specified'
-  const text = [
-    '♡ New booking request',
-    '',
+  const details = [
     `Name: ${booking.name}`,
     `Contact: ${booking.contact}`,
     `Date: ${formatHelsinkiSlot(slot)}`,
     `Budget: ${budget}`,
+  ]
+  if (giftCard) {
+    details.push(`Gift card: ${giftCard.code} · ${formatEuro(giftCard.balance_cents)} remaining`)
+  }
+
+  const text = [
+    '♡ New booking request',
+    '',
+    ...details,
     '',
     'Idea:',
     trimTelegramText(booking.idea),
     '',
+    giftCard ? 'Gift card is linked only — no balance has been redeemed yet.' : '',
     'Reference photos will follow in chat if attached.',
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 
   const replyMarkup: TelegramReplyMarkup = {
     inline_keyboard: [[
