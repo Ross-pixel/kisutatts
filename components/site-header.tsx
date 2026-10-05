@@ -14,6 +14,7 @@ export function SiteHeader() {
       <a href="/portfolio" onClick={() => setOpen(false)}>{t.nav.portfolio}</a>
       <a href="/flash" onClick={() => setOpen(false)}>{t.nav.flash}</a>
       <a href="/on-skin" onClick={() => setOpen(false)}>{t.nav.onSkin}</a>
+      <a href="/gift-card" onClick={() => setOpen(false)}>{t.nav.giftCards}</a>
       <a href="/faq" onClick={() => setOpen(false)}>{t.nav.faq}</a>
       <a href={instagram} target="_blank" rel="noreferrer">{t.nav.dm}</a>
     </nav>
