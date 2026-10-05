@@ -1,0 +1,10 @@
+.admin-add-slot-form{scroll-margin-top:210px}
+.admin-inline-form,.admin-inline-form *{box-sizing:border-box}
+.admin-inline-form input,.admin-inline-form select{min-width:0;max-width:100%}
+
+@media(max-width:560px){
+  .admin-add-slot-form,.admin-edit-slot-form,.admin-adjust-form{grid-template-columns:minmax(0,1fr)!important}
+  .admin-add-slot-form .admin-inline-note,.admin-edit-slot-form .admin-inline-note{grid-column:1/-1}
+  .admin-add-slot-form .admin-inline-form-title,.admin-edit-slot-form .admin-inline-form-title,.admin-adjust-form .admin-inline-form-title,.admin-add-slot-form .admin-inline-actions,.admin-edit-slot-form .admin-inline-actions,.admin-adjust-form .admin-inline-actions,.admin-adjust-hint{grid-column:1/-1!important}
+  .admin-inline-form input[type="time"],.admin-inline-form input[type="date"],.admin-inline-form select{width:100%;min-width:0;max-width:100%}
+}
