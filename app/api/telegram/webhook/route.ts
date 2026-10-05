@@ -12,6 +12,7 @@ export const runtime = 'nodejs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const BOOKING_ADMIN_URL = 'https://kisutatts.vercel.app/admin/booking'
+const GIFT_CARD_ADMIN_URL = 'https://kisutatts.vercel.app/admin/gift-cards'
 
 type TelegramUpdate = {
   message?: {
@@ -111,18 +112,26 @@ async function handleStart(update: TelegramUpdate) {
     await telegramApi('sendMessage', {
       chat_id: message.chat.id,
       text: [
-        'kisu.tatts booking bot ♡',
+        'kisu.tatts admin ♡',
         '',
-        'Manage slots and requests from the private admin panel.',
+        'Manage bookings, calendar and gift cards from the private admin panel.',
         `Booking notifications: ${receivesBookingNotifications ? 'on' : 'off'}`,
       ].join('\n'),
       reply_markup: {
-        inline_keyboard: [[
-          {
-            text: '♡ Booking admin',
-            web_app: { url: BOOKING_ADMIN_URL },
-          },
-        ]],
+        inline_keyboard: [
+          [
+            {
+              text: '♡ Booking admin',
+              web_app: { url: BOOKING_ADMIN_URL },
+            },
+          ],
+          [
+            {
+              text: '✦ Gift cards',
+              web_app: { url: GIFT_CARD_ADMIN_URL },
+            },
+          ],
+        ],
       },
     })
   } else {
