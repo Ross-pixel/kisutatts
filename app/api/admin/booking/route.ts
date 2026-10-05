@@ -25,6 +25,15 @@ type BookingDayTemplateSlotRow = {
   note: string | null
 }
 
+type GiftCardRow = {
+  id: string
+  code: string
+  initial_amount_cents: number
+  balance_cents: number
+  status: string
+  recipient_name: string
+}
+
 async function loadJson(url: string, secretKey: string) {
   const response = await fetch(url, {
     headers: { apikey: secretKey },
@@ -85,13 +94,13 @@ export async function GET(request: Request) {
 
   try {
     const { supabaseUrl, secretKey } = getSupabaseServerConfig()
-    const [slots, requests, attachments, templates, templateSlots] = await Promise.all([
+    const [slots, requests, attachments, templates, templateSlots, giftCards] = await Promise.all([
       loadJson(
         `${supabaseUrl}/rest/v1/booking_slots?select=id,starts_at,ends_at,status,note,created_at,updated_at&order=starts_at.asc`,
         secretKey,
       ),
       loadJson(
-        `${supabaseUrl}/rest/v1/booking_requests?select=id,slot_id,name,contact,idea,budget,status,admin_note,completed_at,privacy_accepted_at,privacy_notice_version,requested_starts_at,requested_ends_at,scheduled_starts_at,scheduled_ends_at,created_at,updated_at&order=created_at.desc&limit=100`,
+        `${supabaseUrl}/rest/v1/booking_requests?select=id,slot_id,gift_card_id,name,contact,idea,budget,status,admin_note,completed_at,privacy_accepted_at,privacy_notice_version,requested_starts_at,requested_ends_at,scheduled_starts_at,scheduled_ends_at,created_at,updated_at&order=created_at.desc&limit=100`,
         secretKey,
       ),
       loadJson(
@@ -104,6 +113,10 @@ export async function GET(request: Request) {
       ),
       loadJson(
         `${supabaseUrl}/rest/v1/booking_day_template_slots?select=id,template_id,start_time,end_time,status,note&order=start_time.asc`,
+        secretKey,
+      ),
+      loadJson(
+        `${supabaseUrl}/rest/v1/gift_cards?select=id,code,initial_amount_cents,balance_cents,status,recipient_name`,
         secretKey,
       ),
     ])
@@ -138,6 +151,17 @@ export async function GET(request: Request) {
       templateSlotsByTemplate.set(item.template_id, current)
     }
 
+    const giftCardsById = new Map(
+      (giftCards as GiftCardRow[]).map((card) => [card.id, {
+        id: card.id,
+        code: card.code,
+        initialAmountCents: card.initial_amount_cents,
+        balanceCents: card.balance_cents,
+        status: card.status,
+        recipientName: card.recipient_name,
+      }]),
+    )
+
     return NextResponse.json({
       admin: {
         id: identity.user.id,
@@ -145,9 +169,10 @@ export async function GET(request: Request) {
         username: identity.user.username || '',
       },
       slots,
-      requests: (requests as Array<Record<string, unknown> & { id: string }>).map((item) => ({
+      requests: (requests as Array<Record<string, unknown> & { id: string; gift_card_id?: string | null }>).map((item) => ({
         ...item,
         attachments: attachmentsByRequest.get(item.id) || [],
+        giftCard: item.gift_card_id ? giftCardsById.get(item.gift_card_id) || null : null,
       })),
       templates: (templates as Array<Record<string, unknown> & { id: string }>).map((template) => ({
         ...template,
