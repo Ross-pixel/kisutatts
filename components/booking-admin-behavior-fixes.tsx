@@ -16,6 +16,20 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit) {
   return 'GET'
 }
 
+function refreshBookingDashboard(attempt = 0) {
+  const refreshButton = document.querySelector<HTMLButtonElement>('.admin-refresh')
+
+  if (refreshButton && !refreshButton.disabled) {
+    refreshButton.click()
+  } else if (attempt < 6) {
+    window.setTimeout(() => refreshBookingDashboard(attempt + 1), 150)
+  }
+
+  const form = document.querySelector('.admin-add-slot-form')
+  const addButton = document.querySelector<HTMLButtonElement>('.admin-day-add')
+  if (form && addButton && !addButton.disabled) addButton.click()
+}
+
 export function BookingAdminBehaviorFixes() {
   useEffect(() => {
     const originalFetch = window.fetch
@@ -28,14 +42,7 @@ export function BookingAdminBehaviorFixes() {
       if (response.ok && url.includes('/api/admin/booking/slots') && method === 'POST') {
         // The slot is already safely stored server-side at this point. Refresh the
         // dashboard explicitly so the newly-created window appears immediately.
-        window.setTimeout(() => {
-          document.querySelector<HTMLButtonElement>('.admin-refresh')?.click()
-
-          // If React kept the editor open after the async submit, close it now.
-          if (document.querySelector('.admin-add-slot-form')) {
-            document.querySelector<HTMLButtonElement>('.admin-day-add')?.click()
-          }
-        }, 120)
+        window.setTimeout(() => refreshBookingDashboard(), 120)
       }
 
       if (response.ok && url.includes('/api/admin/booking/requests') && method === 'POST') {
