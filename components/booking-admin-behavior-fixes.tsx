@@ -61,10 +61,10 @@ export function BookingAdminBehaviorFixes() {
       const opening = !document.querySelector('.admin-add-slot-form')
       if (!opening) return
 
-      // The editor is rendered after this click, so wait one frame before looking
+      // The editor is rendered after this click, so wait a moment before looking
       // for it and then bring the whole form into the Telegram viewport.
       window.setTimeout(() => {
-        document.getElementById('admin-add-slot-form')?.scrollIntoView({
+        document.querySelector<HTMLElement>('.admin-add-slot-form')?.scrollIntoView({
           behavior: 'smooth',
           block: 'center',
         })
