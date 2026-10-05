@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const GIFT_CARD_RE = /^KISU-[0-9A-F]{6}-[0-9A-F]{6}$/
 
 function clean(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
@@ -103,6 +104,7 @@ export async function POST(request: Request) {
     const contact = clean(body?.contact)
     const idea = clean(body?.idea)
     const budget = clean(body?.budget)
+    const giftCardCode = clean(body?.giftCardCode).toUpperCase()
     const turnstileToken = clean(body?.turnstileToken)
     const privacyAccepted = body?.privacyAccepted === true
 
@@ -124,6 +126,10 @@ export async function POST(request: Request) {
 
     if (budget.length > 200) {
       return NextResponse.json({ error: 'Budget is too long.' }, { status: 400 })
+    }
+
+    if (giftCardCode && !GIFT_CARD_RE.test(giftCardCode)) {
+      return NextResponse.json({ error: 'Please enter a valid gift card code.' }, { status: 400 })
     }
 
     if (!privacyAccepted) {
@@ -161,6 +167,7 @@ export async function POST(request: Request) {
         p_contact: contact,
         p_idea: idea,
         p_budget: budget || null,
+        p_gift_card_code: giftCardCode || null,
       }),
       cache: 'no-store',
     })
@@ -178,6 +185,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: 'That time was just taken. Please choose another available slot.' },
           { status: 409 },
+        )
+      }
+
+      if (message.includes('GIFT_CARD_INVALID')) {
+        return NextResponse.json(
+          { error: 'That gift card code is not active or has no remaining balance.' },
+          { status: 400 },
         )
       }
 
