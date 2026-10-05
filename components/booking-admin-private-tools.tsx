@@ -4,6 +4,15 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 
 type RequestStatus = 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed'
 
+type LinkedGiftCard = {
+  id: string
+  code: string
+  initialAmountCents: number
+  balanceCents: number
+  status: string
+  recipientName: string
+}
+
 type BookingRequest = {
   id: string
   name: string
@@ -12,6 +21,7 @@ type BookingRequest = {
   admin_note: string | null
   scheduled_starts_at: string
   scheduled_ends_at: string
+  giftCard?: LinkedGiftCard | null
 }
 
 type AdminPayload = {
@@ -46,6 +56,15 @@ function formatScheduled(request: BookingRequest) {
     minute: '2-digit',
   })
   return `${date} · ${time.format(start)}–${time.format(end)}`
+}
+
+function money(cents: number) {
+  return new Intl.NumberFormat('en-FI', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100)
 }
 
 export function BookingAdminPrivateTools() {
@@ -198,7 +217,7 @@ export function BookingAdminPrivateTools() {
             >
               {active.map((request) => (
                 <option value={request.id} key={request.id}>
-                  {request.name} · {request.contact} · {request.status}
+                  {request.name} · {request.contact} · {request.status}{request.giftCard ? ' · gift card' : ''}
                 </option>
               ))}
             </select>
@@ -210,6 +229,22 @@ export function BookingAdminPrivateTools() {
                 <div><b>{selected.name}</b><span>{selected.contact}</span></div>
                 <small>{formatScheduled(selected)}</small>
               </div>
+
+              {selected.giftCard ? (
+                <div className="admin-linked-gift-card">
+                  <div>
+                    <span>♡ Gift card linked</span>
+                    <b>{selected.giftCard.code}</b>
+                    <small>{selected.giftCard.recipientName} · {selected.giftCard.status}</small>
+                  </div>
+                  <div>
+                    <strong>{money(selected.giftCard.balanceCents)}</strong>
+                    <small>remaining of {money(selected.giftCard.initialAmountCents)}</small>
+                  </div>
+                  <a href="/admin/gift-cards">Open gift cards →</a>
+                </div>
+              ) : null}
+
               <label>
                 <span>Admin note</span>
                 <textarea
