@@ -112,6 +112,13 @@ export function BookingAdminPrivateTools() {
     if (initData) void load(initData)
   }, [initData])
 
+  useEffect(() => {
+    if (!initData) return
+    const refresh = () => void load(initData)
+    window.addEventListener('kisu-booking-admin-refresh', refresh)
+    return () => window.removeEventListener('kisu-booking-admin-refresh', refresh)
+  }, [initData])
+
   const active = useMemo(
     () => (payload?.requests || [])
       .filter((request) => request.status === 'pending' || request.status === 'confirmed')
