@@ -170,15 +170,10 @@ async function loadBookingsBetween(
   startsAt: Date,
   endsAt: Date,
 ) {
-  const params = new URLSearchParams({
-    select: 'id,gift_card_id,name,contact,idea,budget,admin_note,scheduled_starts_at,scheduled_ends_at',
-    status: 'eq.confirmed',
-    scheduled_starts_at: `gte.${startsAt.toISOString()}`,
-    scheduled_starts_at: `gte.${startsAt.toISOString()}`,
-  })
-
-  // URLSearchParams cannot represent two values for the same key via the object
-  // constructor, so append the upper bound separately.
+  const params = new URLSearchParams()
+  params.set('select', 'id,gift_card_id,name,contact,idea,budget,admin_note,scheduled_starts_at,scheduled_ends_at')
+  params.set('status', 'eq.confirmed')
+  params.append('scheduled_starts_at', `gte.${startsAt.toISOString()}`)
   params.append('scheduled_starts_at', `lt.${endsAt.toISOString()}`)
   params.set('order', 'scheduled_starts_at.asc')
 
