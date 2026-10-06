@@ -5,7 +5,7 @@ import {
   getTelegramWebhookSecret,
   telegramApi,
 } from '@/lib/telegram'
-import { isTelegramAdminUserId } from '@/lib/telegram-access'
+import { getTelegramReminderChatId, isTelegramAdminUserId } from '@/lib/telegram-access'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
