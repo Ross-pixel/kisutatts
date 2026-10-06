@@ -31,14 +31,38 @@ type GiftCardRow = {
   status: string
 }
 
-function authorized(request: Request) {
-  const secret = process.env.CRON_SECRET?.trim() || ''
-  if (!secret) return false
-
-  const expected = Buffer.from(`Bearer ${secret}`)
-  const actual = Buffer.from(request.headers.get('authorization') || '')
-
+function timingSafeMatch(expectedValue: string, actualValue: string) {
+  const expected = Buffer.from(expectedValue)
+  const actual = Buffer.from(actualValue)
   return expected.length === actual.length && timingSafeEqual(expected, actual)
+}
+
+async function authorized(
+  request: Request,
+  supabaseUrl: string,
+  secretKey: string,
+) {
+  const cronSecret = process.env.CRON_SECRET?.trim() || ''
+  const authorization = request.headers.get('authorization') || ''
+
+  if (cronSecret && timingSafeMatch(`Bearer ${cronSecret}`, authorization)) {
+    return true
+  }
+
+  const reminderKey = request.headers.get('x-kisu-reminder-key')?.trim() || ''
+  if (!reminderKey) return false
+
+  try {
+    return await callReminderRpc<boolean>(
+      supabaseUrl,
+      secretKey,
+      'verify_booking_reminder_cron_key',
+      { p_key: reminderKey },
+    )
+  } catch (error) {
+    console.error('Unable to verify Supabase reminder cron key:', error)
+    return false
+  }
 }
 
 async function loadJson<T>(url: string, secretKey: string): Promise<T> {
@@ -173,8 +197,10 @@ async function loadBookingsBetween(
   const params = new URLSearchParams()
   params.set('select', 'id,gift_card_id,name,contact,idea,budget,admin_note,scheduled_starts_at,scheduled_ends_at')
   params.set('status', 'eq.confirmed')
-  params.append('scheduled_starts_at', `gte.${startsAt.toISOString()}`)
-  params.append('scheduled_starts_at', `lt.${endsAt.toISOString()}`)
+  params.set(
+    'and',
+    `(scheduled_starts_at.gte.${startsAt.toISOString()},scheduled_starts_at.lt.${endsAt.toISOString()})`,
+  )
   params.set('order', 'scheduled_starts_at.asc')
 
   return await loadJson<BookingReminderRow[]>(
@@ -340,8 +366,11 @@ async function sendTwoHourReminders(
   chatId: string,
   now: Date,
 ) {
-  const start = new Date(now.getTime() + 90 * 60_000)
-  const end = new Date(now.getTime() + 150 * 60_000)
+  // Supabase Cron calls this endpoint every 30 minutes. A 100–140 minute
+  // window guarantees one useful reminder for any appointment minute while
+  // keeping delivery close to the two-hour mark.
+  const start = new Date(now.getTime() + 100 * 60_000)
+  const end = new Date(now.getTime() + 140 * 60_000)
   const bookings = await loadBookingsBetween(supabaseUrl, secretKey, start, end)
   const giftCards = await loadGiftCards(supabaseUrl, secretKey, bookings)
   let sent = 0
@@ -383,10 +412,9 @@ async function sendTwoHourReminders(
 }
 
 export async function GET(request: Request) {
-  if (!process.env.CRON_SECRET?.trim()) {
-    return NextResponse.json({ error: 'Booking reminders are not configured.' }, { status: 503 })
-  }
-  if (!authorized(request)) {
+  const { supabaseUrl, secretKey } = getSupabaseServerConfig()
+
+  if (!await authorized(request, supabaseUrl, secretKey)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -396,7 +424,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { supabaseUrl, secretKey } = getSupabaseServerConfig()
     const now = new Date()
 
     const [tomorrow, twoHours] = await Promise.all([
