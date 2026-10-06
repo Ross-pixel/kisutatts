@@ -10,11 +10,13 @@ function parseTelegramIds(value: string | undefined) {
 }
 
 export function getTelegramAdminUserIds() {
-  const configured = parseTelegramIds(process.env.TELEGRAM_ADMIN_USER_IDS)
-  if (configured.length > 0) return configured
-
-  // Backwards compatibility while the production env is migrated.
-  return parseTelegramIds(process.env.TELEGRAM_ADMIN_USER_ID)
+  // Merge the modern allowlist with the legacy single-admin value. This lets us
+  // add Eva without risking loss of the original technical-admin access while
+  // production environment variables are migrated.
+  return Array.from(new Set([
+    ...parseTelegramIds(process.env.TELEGRAM_ADMIN_USER_IDS),
+    ...parseTelegramIds(process.env.TELEGRAM_ADMIN_USER_ID),
+  ]))
 }
 
 export function isTelegramAdminUserId(userId: number | string | undefined) {
